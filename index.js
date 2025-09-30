@@ -1,6 +1,9 @@
 import express from 'express';
 import connectDB from './config/connect-db.mjs';
 import { specs, swaggerUi } from './config/swagger.mjs';
+import authRouter from './routes/auth.mjs';
+import driverRouter from './routes/driver.mjs';
+import tripRouter from './routes/trip.mjs';
 
 const app = express();
 
@@ -16,27 +19,10 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   customSiteTitle: "Driver & Trip API Documentation"
 }));
 
-// Importar rutas condicionalmente
-try {
-  const { default: authRouter } = await import('./routes/auth.mjs');
-  app.use('/api/auth', authRouter);
-} catch (error) {
-  console.log('Auth routes not available');
-}
-
-try {
-  const { default: driverRouter } = await import('./routes/driver.mjs');
-  app.use('/api/drivers', driverRouter);
-} catch (error) {
-  console.log('Driver routes not available');
-}
-
-try {
-  const { default: tripRouter } = await import('./routes/trip.mjs');
-  app.use('/api/trips', tripRouter);
-} catch (error) {
-  console.log('Trip routes not available');
-}
+// Routes - imports directos
+app.use('/api/auth', authRouter);
+app.use('/api/drivers', driverRouter);
+app.use('/api/trips', tripRouter);
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -65,5 +51,5 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Para Vercel - NO uses app.listen()
+// Para Vercel
 export default app;
