@@ -1,15 +1,11 @@
 import express from 'express';
 import connectDB from './config/connect-db.mjs';
 import { specs, swaggerUi } from './config/swagger.mjs';
-import authRouter from './routes/auth.mjs';
-import driverRouter from './routes/driver.mjs';
-import tripRouter from './routes/trip.mjs';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
 
 // Conectar a la base de datos
-connectDB();
+connectDB().catch(console.error);
 
 // Middlewares
 app.use(express.json());
@@ -20,16 +16,33 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
   customSiteTitle: "Driver & Trip API Documentation"
 }));
 
-// Routes
-app.use('/api/auth', authRouter);
-app.use('/api/drivers', driverRouter);
-app.use('/api/trips', tripRouter);
+// Importar rutas condicionalmente
+try {
+  const { default: authRouter } = await import('./routes/auth.mjs');
+  app.use('/api/auth', authRouter);
+} catch (error) {
+  console.log('Auth routes not available');
+}
+
+try {
+  const { default: driverRouter } = await import('./routes/driver.mjs');
+  app.use('/api/drivers', driverRouter);
+} catch (error) {
+  console.log('Driver routes not available');
+}
+
+try {
+  const { default: tripRouter } = await import('./routes/trip.mjs');
+  app.use('/api/trips', tripRouter);
+} catch (error) {
+  console.log('Trip routes not available');
+}
 
 // Root endpoint
 app.get('/', (req, res) => {
     res.status(200).json({ 
-        message: 'Driver & Trip Management API Server Ready at port ' + PORT,
-        documentation: `http://localhost:${PORT}/api-docs`,
+        message: 'Driver & Trip Management API Ready',
+        documentation: '/api-docs',
         endpoints: {
             auth: '/api/auth/login',
             drivers: '/api/drivers',
@@ -38,7 +51,19 @@ app.get('/', (req, res) => {
     });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server ready at port ${PORT}`);
-    console.log(` API Documentation: http://localhost:${PORT}/api-docs`);
+// Health check
+app.get('/health', (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
+
+// Error handler
+app.use((err, req, res, next) => {
+    console.error('Error:', err);
+    res.status(500).json({
+        success: false,
+        message: 'Internal Server Error'
+    });
+});
+
+// Para Vercel - NO uses app.listen()
+export default app;
