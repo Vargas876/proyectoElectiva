@@ -15,12 +15,8 @@ const options = {
     },
     servers: [
       {
-        url: process.env.NODE_ENV === 'production' 
-          ? 'https://proyecto-electiva-nine.vercel.app/'  // Cambia esto por tu URL real de Vercel
-          : 'http://localhost:3000',
-        description: process.env.NODE_ENV === 'production' 
-          ? 'Servidor de producción' 
-          : 'Servidor de desarrollo'
+        url: '/',
+        description: 'API Server'
       }
     ],
     components: {
