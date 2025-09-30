@@ -35,7 +35,6 @@ const driverSchema = new Schema({
     min: [0, 'Rating cannot be less than 0'],
     max: [5, 'Rating cannot be more than 5']
   },
-  // NUEVOS CAMPOS AGREGADOS
   total_trips: {
     type: Number,
     default: 0
@@ -64,4 +63,5 @@ const driverSchema = new Schema({
 });
 
 const Driver = model('Driver', driverSchema);
+
 export default Driver;

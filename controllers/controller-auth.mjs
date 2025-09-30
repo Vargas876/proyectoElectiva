@@ -41,4 +41,39 @@ export async function login(req, res) {
             error: error.message
         });
     }
+
+}
+export async function verifyToken(req, res) {
+    try {
+        // El middleware ya verificó el token y agregó req.user
+        const driver = await Driver.findById(req.user.id);
+        
+        if (!driver) {
+            return res.status(404).json({
+                success: false,
+                message: 'Conductor no encontrado'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Token válido',
+            driver: {
+                id: driver._id,
+                name: driver.name,
+                email: driver.email,
+                phone: driver.phone,
+                license_number: driver.license_number,
+                rating: driver.rating,
+                total_trips: driver.total_trips,
+                status: driver.status
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al verificar token',
+            error: error.message
+        });
+    }
 }

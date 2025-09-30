@@ -6,12 +6,28 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "build": "echo 'No build step required'",
+    "lint": "echo 'No linting configured'",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["api", "drivers", "trips", "uber", "nodejs"],
-  "author": "",
+  "keywords": [
+    "api", 
+    "drivers", 
+    "trips", 
+    "uber", 
+    "nodejs", 
+    "express", 
+    "mongodb", 
+    "jwt", 
+    "swagger"
+  ],
+  "author": "Tu Nombre <tu@email.com>",
   "license": "ISC",
-  "description": "API for managing drivers and trips with intelligent rating system",
+  "description": "API for managing drivers and trips with intelligent rating system - Similar to Uber",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tuusuario/proyectoelectiva.git"
+  },
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^5.1.0",
@@ -26,6 +42,10 @@
     "nodemon": "^3.1.10"
   },
   "engines": {
-    "node": ">=18.0.0"
-  }
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "private": false,
+  "os": ["linux", "darwin", "win32"],
+  "cpu": ["x64", "arm64"]
 }

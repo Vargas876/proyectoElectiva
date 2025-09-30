@@ -72,17 +72,6 @@ const router = express.Router();
  *     responses:
  *       201:
  *         description: Conductor creado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/Driver'
  *       400:
  *         description: Datos inválidos o conductor duplicado
  *       500:
@@ -107,15 +96,6 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: Conductor encontrado
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 data:
- *                   $ref: '#/components/schemas/Driver'
  *       404:
  *         description: Conductor no encontrado
  *       500:
@@ -131,9 +111,7 @@ const router = express.Router();
  *         required: true
  *         schema:
  *           type: string
- *         description: ID único del conductor
  *     requestBody:
- *       required: true
  *       content:
  *         application/json:
  *           schema:
@@ -141,46 +119,18 @@ const router = express.Router();
  *             properties:
  *               name:
  *                 type: string
- *                 example: "Juan Carlos Pérez"
  *               email:
  *                 type: string
- *                 format: email
- *                 example: "juancarlos@example.com"
  *               phone:
  *                 type: string
- *                 example: "+57 310 9876543"
- *               license_number:
- *                 type: string
- *                 example: "COL789456"
- *               rating:
- *                 type: number
- *                 minimum: 0
- *                 maximum: 5
- *                 example: 4.8
  *               status:
  *                 type: string
  *                 enum: [available, busy, offline]
- *                 example: "available"
  *     responses:
  *       200:
- *         description: Conductor actualizado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/Driver'
- *       400:
- *         description: Datos inválidos o duplicados
+ *         description: Conductor actualizado
  *       404:
  *         description: Conductor no encontrado
- *       500:
- *         description: Error del servidor
  *   delete:
  *     summary: Eliminar conductor
  *     tags: [Drivers]
@@ -192,25 +142,11 @@ const router = express.Router();
  *         required: true
  *         schema:
  *           type: string
- *         description: ID único del conductor
  *     responses:
  *       200:
- *         description: Conductor eliminado exitosamente
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                 message:
- *                   type: string
- *                 data:
- *                   $ref: '#/components/schemas/Driver'
+ *         description: Conductor eliminado
  *       404:
  *         description: Conductor no encontrado
- *       500:
- *         description: Error del servidor
  */
 
 router.get('/', verifyToken, findAll);

@@ -6,6 +6,13 @@ const router = express.Router();
 
 /**
  * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: Autenticación JWT
+ */
+
+/**
+ * @swagger
  * /api/auth/login:
  *   post:
  *     summary: Login de conductor
@@ -40,6 +47,10 @@ const router = express.Router();
  *                   type: string
  *                 driver:
  *                   $ref: '#/components/schemas/Driver'
+ *       401:
+ *         description: Credenciales inválidas
+ *       500:
+ *         description: Error del servidor
  */
 router.post('/login', login);
 
@@ -54,6 +65,17 @@ router.post('/login', login);
  *     responses:
  *       200:
  *         description: Token válido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 driver:
+ *                   $ref: '#/components/schemas/Driver'
+ *       401:
+ *         description: Token inválido o expirado
  */
 router.get('/verify', verifyToken, verifyTokenController);
 

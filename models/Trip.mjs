@@ -40,7 +40,6 @@ const tripSchema = new Schema({
     enum: ['scheduled', 'in_progress', 'completed', 'cancelled'],
     default: 'scheduled'
   },
-  // NUEVOS CAMPOS PARA CALCULAR RATING
   distance_km: {
     type: Number,
     default: function() {
@@ -68,7 +67,7 @@ const tripSchema = new Schema({
     type: String,
     enum: ['morning', 'afternoon', 'evening', 'night'],
     default: function() {
-      const hour = new Date(this.departure_time).getHours();
+      const hour = new Date().getHours(); // Usa hora actual por defecto
       if (hour >= 6 && hour < 12) return 'morning';
       if (hour >= 12 && hour < 18) return 'afternoon';
       if (hour >= 18 && hour < 22) return 'evening';
@@ -100,4 +99,5 @@ const tripSchema = new Schema({
 });
 
 const Trip = model('Trip', tripSchema);
+
 export default Trip;

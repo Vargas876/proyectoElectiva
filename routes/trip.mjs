@@ -31,6 +31,8 @@ const router = express.Router();
  *                   type: array
  *                   items:
  *                     $ref: '#/components/schemas/Trip'
+ *                 total:
+ *                   type: number
  *   post:
  *     summary: Crear nuevo viaje
  *     tags: [Trips]
@@ -73,6 +75,10 @@ const router = express.Router();
  *     responses:
  *       201:
  *         description: Viaje creado exitosamente
+ *       400:
+ *         description: Datos inválidos
+ *       404:
+ *         description: Conductor no encontrado
  */
 
 /**
@@ -107,10 +113,22 @@ const router = express.Router();
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/Trip'
+ *             type: object
+ *             properties:
+ *               origin:
+ *                 type: string
+ *               destination:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               status:
+ *                 type: string
+ *                 enum: [scheduled, in_progress, completed, cancelled]
  *     responses:
  *       200:
  *         description: Viaje actualizado
+ *       404:
+ *         description: Viaje no encontrado
  *   delete:
  *     summary: Eliminar viaje
  *     tags: [Trips]
@@ -125,6 +143,8 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: Viaje eliminado
+ *       404:
+ *         description: Viaje no encontrado
  */
 
 /**
@@ -162,6 +182,10 @@ const router = express.Router();
  *                       type: number
  *                     factors:
  *                       type: object
+ *       400:
+ *         description: Viaje ya completado
+ *       404:
+ *         description: Viaje no encontrado
  */
 
 router.get('/', findAll);
