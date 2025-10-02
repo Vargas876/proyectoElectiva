@@ -6,6 +6,46 @@ const router = express.Router();
 
 /**
  * @swagger
+ * components:
+ *   schemas:
+ *     LoginRequest:
+ *       type: object
+ *       required:
+ *         - email
+ *         - license_number
+ *       properties:
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: juan.vargas40@uptc.edu.co
+ *         license_number:
+ *           type: string
+ *           example: CD25442652
+ *     RegisterRequest:
+ *       type: object
+ *       required:
+ *         - name
+ *         - email
+ *         - phone
+ *         - license_number
+ *       properties:
+ *         name:
+ *           type: string
+ *           example: Juan Pérez
+ *         email:
+ *           type: string
+ *           format: email
+ *           example: juan@example.com
+ *         phone:
+ *           type: string
+ *           example: +57 300 1234567
+ *         license_number:
+ *           type: string
+ *           example: ABC123456
+ */
+
+/**
+ * @swagger
  * /api/auth/login:
  *   post:
  *     summary: Login de conductor
@@ -15,17 +55,7 @@ const router = express.Router();
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - email
- *               - license_number
- *             properties:
- *               email:
- *                 type: string
- *                 example: "juan.perez@example.com"
- *               license_number:
- *                 type: string
- *                 example: "ABC123456"
+ *             $ref: '#/components/schemas/LoginRequest'
  *     responses:
  *       200:
  *         description: Login exitoso
@@ -36,10 +66,13 @@ const router = express.Router();
  *               properties:
  *                 success:
  *                   type: boolean
+ *                   example: true
  *                 message:
  *                   type: string
+ *                   example: Login exitoso
  *                 token:
  *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *                 driver:
  *                   type: object
  *       401:
@@ -58,24 +91,25 @@ router.post('/login', login);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *               - phone
- *               - license_number
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *               phone:
- *                 type: string
- *               license_number:
- *                 type: string
+ *             $ref: '#/components/schemas/RegisterRequest'
  *     responses:
  *       201:
  *         description: Conductor registrado exitosamente
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *                 driver:
+ *                   type: object
+ *       400:
+ *         description: Error de validación o conductor ya existe
  */
 router.post('/register', register);
 
@@ -83,13 +117,28 @@ router.post('/register', register);
  * @swagger
  * /api/auth/verify:
  *   get:
- *     summary: Verificar token y obtener info del conductor
+ *     summary: Verificar token JWT
  *     tags: [Authentication]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Token válido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 message:
+ *                   type: string
+ *                 driver:
+ *                   type: object
+ *       401:
+ *         description: Token inválido o faltante
+ *       404:
+ *         description: Conductor no encontrado
  */
 router.get('/verify', authenticateToken, verifyToken);
 

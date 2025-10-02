@@ -1,0 +1,499 @@
+{
+    "info": {
+      "name": "Driver Trip API - Render",
+      "description": "Colección completa para probar la API de Driver Trip en Render",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+      {
+        "key": "base_url",
+        "value": "https://proyectoelectiva-pyl0.onrender.com",
+        "type": "string"
+      },
+      {
+        "key": "token",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "driver_id",
+        "value": "",
+        "type": "string"
+      },
+      {
+        "key": "trip_id",
+        "value": "",
+        "type": "string"
+      }
+    ],
+    "item": [
+      {
+        "name": "🔐 Authentication",
+        "item": [
+          {
+            "name": "Register Driver",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 201) {",
+                    "    const response = pm.response.json();",
+                    "    pm.collectionVariables.set('token', response.token);",
+                    "    pm.collectionVariables.set('driver_id', response.driver.id);",
+                    "    console.log('Token guardado:', response.token);",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"name\": \"Juan Pérez\",\n  \"email\": \"juan.perez@example.com\",\n  \"phone\": \"+57 300 1234567\",\n  \"license_number\": \"ABC123456\"\n}"
+              },
+              "url": {
+                "raw": "{{base_url}}/api/auth/register",
+                "host": ["{{base_url}}"],
+                "path": ["api", "auth", "register"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Login",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    const response = pm.response.json();",
+                    "    pm.collectionVariables.set('token', response.token);",
+                    "    pm.collectionVariables.set('driver_id', response.driver.id);",
+                    "    console.log('Token guardado:', response.token);",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"email\": \"juan.perez@example.com\",\n  \"license_number\": \"ABC123456\"\n}"
+              },
+              "url": {
+                "raw": "{{base_url}}/api/auth/login",
+                "host": ["{{base_url}}"],
+                "path": ["api", "auth", "login"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Verify Token",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/auth/verify",
+                "host": ["{{base_url}}"],
+                "path": ["api", "auth", "verify"]
+              }
+            },
+            "response": []
+          }
+        ]
+      },
+      {
+        "name": "👤 Drivers",
+        "item": [
+          {
+            "name": "Get All Drivers",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/drivers",
+                "host": ["{{base_url}}"],
+                "path": ["api", "drivers"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get Driver by ID",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/drivers/{{driver_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "drivers", "{{driver_id}}"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Create Driver",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 201) {",
+                    "    const response = pm.response.json();",
+                    "    pm.collectionVariables.set('driver_id', response.data._id);",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"name\": \"María García\",\n  \"email\": \"maria.garcia@example.com\",\n  \"phone\": \"+57 310 9876543\",\n  \"license_number\": \"XYZ789012\"\n}"
+              },
+              "url": {
+                "raw": "{{base_url}}/api/drivers",
+                "host": ["{{base_url}}"],
+                "path": ["api", "drivers"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Update Driver",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"status\": \"busy\",\n  \"rating\": 4.8\n}"
+              },
+              "url": {
+                "raw": "{{base_url}}/api/drivers/{{driver_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "drivers", "{{driver_id}}"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Delete Driver",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/drivers/{{driver_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "drivers", "{{driver_id}}"]
+              }
+            },
+            "response": []
+          }
+        ]
+      },
+      {
+        "name": "🚗 Trips",
+        "item": [
+          {
+            "name": "Get All Trips",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/trips",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get Trips by Status",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/trips?status=scheduled",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips"],
+                "query": [
+                  {
+                    "key": "status",
+                    "value": "scheduled",
+                    "description": "Options: scheduled, in_progress, completed, cancelled"
+                  }
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get Trip by ID",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/trips/{{trip_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips", "{{trip_id}}"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Create Trip",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 201) {",
+                    "    const response = pm.response.json();",
+                    "    pm.collectionVariables.set('trip_id', response.data._id);",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ],
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"driver_id\": \"{{driver_id}}\",\n  \"origin\": \"Bogotá\",\n  \"destination\": \"Fusagasugá\",\n  \"departure_time\": \"2025-10-15T08:00:00Z\",\n  \"price\": 25000,\n  \"available_seats\": 4,\n  \"distance_km\": 65,\n  \"duration_minutes\": 90\n}"
+              },
+              "url": {
+                "raw": "{{base_url}}/api/trips",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Update Trip",
+            "request": {
+              "method": "PUT",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"status\": \"completed\",\n  \"arrival_time\": \"2025-10-15T09:30:00Z\"\n}"
+              },
+              "url": {
+                "raw": "{{base_url}}/api/trips/{{trip_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips", "{{trip_id}}"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Add Passenger to Trip",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"name\": \"Pedro Martínez\",\n  \"phone\": \"+57 300 1111111\",\n  \"seats_reserved\": 2\n}"
+              },
+              "url": {
+                "raw": "{{base_url}}/api/trips/{{trip_id}}/passengers",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips", "{{trip_id}}", "passengers"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Rate Trip",
+            "request": {
+              "method": "POST",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                },
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": {
+                "mode": "raw",
+                "raw": "{\n  \"rating\": 4.5\n}"
+              },
+              "url": {
+                "raw": "{{base_url}}/api/trips/{{trip_id}}/rate",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips", "{{trip_id}}", "rate"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get Trip Statistics",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/trips/statistics",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips", "statistics"]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Get Statistics by Driver",
+            "request": {
+              "method": "GET",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/trips/statistics?driver_id={{driver_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips", "statistics"],
+                "query": [
+                  {
+                    "key": "driver_id",
+                    "value": "{{driver_id}}"
+                  }
+                ]
+              }
+            },
+            "response": []
+          },
+          {
+            "name": "Delete Trip",
+            "request": {
+              "method": "DELETE",
+              "header": [
+                {
+                  "key": "Authorization",
+                  "value": "Bearer {{token}}"
+                }
+              ],
+              "url": {
+                "raw": "{{base_url}}/api/trips/{{trip_id}}",
+                "host": ["{{base_url}}"],
+                "path": ["api", "trips", "{{trip_id}}"]
+              }
+            },
+            "response": []
+          }
+        ]
+      }
+    ]
+  }
