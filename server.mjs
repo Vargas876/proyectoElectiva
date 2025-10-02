@@ -18,28 +18,25 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-// 👇 ACTUALIZAR ESTA SECCIÓN - Swagger configuration
+// En server.mjs - Swagger configuration
 const swaggerOptions = {
     definition: {
         openapi: '3.0.0',
         info: {
             title: 'Driver Trip API',
             version: '1.0.0',
-            description: 'API RESTful para gestión de conductores y viajes con autenticación JWT y MongoDB Atlas',
-            contact: {
-                name: 'API Support',
-                email: 'support@drivertrip.com'
-            }
+            description: 'API RESTful para gestión de conductores y viajes',
         },
         servers: [
+            // Servidor de producción
             {
-                url: process.env.NODE_ENV === 'production' 
-                    ? 'https://proyectoelectiva-pyl0.onrender.com'  
-                    : `http://localhost:${PORT}`,
-                description: process.env.NODE_ENV === 'production' 
-                    ? 'Production server (Render)' 
-                    : 'Development server'
+                url: 'https://proyectoelectiva-pyl0.onrender.com',
+                description: 'Production server (Render)'
+            },
+            // Servidor local (desarrollo)
+            {
+                url: 'http://localhost:3000',
+                description: 'Development server'
             }
         ],
         components: {
@@ -47,8 +44,7 @@ const swaggerOptions = {
                 bearerAuth: {
                     type: 'http',
                     scheme: 'bearer',
-                    bearerFormat: 'JWT',
-                    description: 'Ingresa el token JWT obtenido del endpoint /api/auth/login'
+                    bearerFormat: 'JWT'
                 }
             }
         },
@@ -56,9 +52,8 @@ const swaggerOptions = {
             bearerAuth: []
         }]
     },
-    apis: ['./routes/*.mjs', './controllers/*.mjs']  // Rutas donde buscar documentación
+    apis: ['./routes/*.mjs']
 };
-
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
 
 // Personalizar Swagger UI
