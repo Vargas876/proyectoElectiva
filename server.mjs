@@ -3,7 +3,6 @@ import express from 'express';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
 import connectDB from './config/connect-db.mjs';
-import { generateToken } from './middlewares/auth.mjs';
 import { errorHandler, notFound } from './middlewares/errorHandler.mjs';
 import authRoutes from './routes/auth-routes.mjs';
 import driverRoutes from './routes/driver-routes.mjs';
@@ -20,19 +19,27 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Swagger configuration
+// 👇 ACTUALIZAR ESTA SECCIÓN - Swagger configuration
 const swaggerOptions = {
     definition: {
         openapi: '3.0.0',
         info: {
             title: 'Driver Trip API',
             version: '1.0.0',
-            description: 'RESTful API for managing drivers and trips with JWT authentication',
+            description: 'API RESTful para gestión de conductores y viajes con autenticación JWT y MongoDB Atlas',
+            contact: {
+                name: 'API Support',
+                email: 'support@drivertrip.com'
+            }
         },
         servers: [
             {
-                url: `http://localhost:${PORT}`,
-                description: 'Development server'
+                url: process.env.NODE_ENV === 'production' 
+                    ? 'https://proyectoelectiva-pyl0.onrender.com'  
+                    : `http://localhost:${PORT}`,
+                description: process.env.NODE_ENV === 'production' 
+                    ? 'Production server (Render)' 
+                    : 'Development server'
             }
         ],
         components: {
@@ -40,7 +47,8 @@ const swaggerOptions = {
                 bearerAuth: {
                     type: 'http',
                     scheme: 'bearer',
-                    bearerFormat: 'JWT'
+                    bearerFormat: 'JWT',
+                    description: 'Ingresa el token JWT obtenido del endpoint /api/auth/login'
                 }
             }
         },
@@ -48,49 +56,57 @@ const swaggerOptions = {
             bearerAuth: []
         }]
     },
-    apis: ['./routes/*.mjs']
+    apis: ['./routes/*.mjs', './controllers/*.mjs']  // Rutas donde buscar documentación
 };
 
 const swaggerDocs = swaggerJsdoc(swaggerOptions);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
+
+// Personalizar Swagger UI
+const swaggerUiOptions = {
+    customCss: '.swagger-ui .topbar { display: none }',
+    customSiteTitle: 'Driver Trip API Documentation',
+    swaggerOptions: {
+        persistAuthorization: true,  // Mantener el token entre recargas
+    }
+};
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, swaggerUiOptions));
 
 // Routes
 app.get('/', (req, res) => {
     res.json({
         success: true,
-        message: 'Welcome to Driver Trip API',
+        message: 'Bienvenido a Driver Trip API',
+        version: '1.0.0',
         documentation: '/api-docs',
         endpoints: {
-            drivers: '/api/drivers',
-            trips: '/api/trips',
-            auth: '/api/auth/login'
+            authentication: {
+                login: 'POST /api/auth/login',
+                register: 'POST /api/auth/register',
+                verify: 'GET /api/auth/verify'
+            },
+            drivers: {
+                list: 'GET /api/drivers',
+                get: 'GET /api/drivers/:id',
+                create: 'POST /api/drivers',
+                update: 'PUT /api/drivers/:id',
+                delete: 'DELETE /api/drivers/:id'
+            },
+            trips: {
+                list: 'GET /api/trips',
+                get: 'GET /api/trips/:id',
+                create: 'POST /api/trips',
+                update: 'PUT /api/trips/:id',
+                delete: 'DELETE /api/trips/:id',
+                addPassenger: 'POST /api/trips/:id/passengers',
+                rate: 'POST /api/trips/:id/rate',
+                statistics: 'GET /api/trips/statistics'
+            }
         }
     });
 });
 
-// Ruta de autenticación (genera token)
-app.post('/api/auth/login', (req, res) => {
-    const { username, password } = req.body;
-    
-    // En producción, validar contra base de datos
-    if (username === 'admin' && password === 'admin123') {
-        const token = generateToken({ username, role: 'admin' });
-        return res.json({
-            success: true,
-            message: 'Login successful',
-            token
-        });
-    }
-    
-    res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-    });
-});
-
-app.use('/api/drivers', driverRoutes);
-app.use('/api/trips', tripRoutes);
-app.use('/api/auth', authRoutes);  
+app.use('/api/auth', authRoutes);
 app.use('/api/drivers', driverRoutes);
 app.use('/api/trips', tripRoutes);
 
@@ -99,8 +115,9 @@ app.use(notFound);
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
-    console.log(`API Documentation: http://localhost:${PORT}/api-docs`);
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
+    console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
 });
 
 export default app;

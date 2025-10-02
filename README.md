@@ -1,4 +1,3 @@
-
 # 🚗 Driver & Trip Management API
 
 API RESTful tipo Uber para gestión de conductores y viajes con sistema de rating automático inteligente.
@@ -17,14 +16,13 @@ API RESTful tipo Uber para gestión de conductores y viajes con sistema de ratin
 - **Backend:** Node.js + Express
 - **Base de Datos:** MongoDB Atlas
 - **Autenticación:** JWT (JSON Web Tokens)
-- **Documentación:** Swagger/OpenAPI
-- **Despliegue:** Vercel
+- **Documentación:** Swagger
+- **Despliegue:** Render
 
 ## 🌐 Acceso en Producción
 
-- **API:** https://proyecto-electivaa.vercel.app/
-- **Documentación:** https://proyecto-electivaa.vercel.app//api-docs
-- **Health Check:** https://proyecto-electivaa.vercel.app//health
+- **API:** https://proyectoelectiva-pyl0.onrender.com
+- **Documentación:** https://proyectoelectiva-pyl0.onrender.com/api-docs/
 
 ## 📦 Instalación Local
 

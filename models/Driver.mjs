@@ -55,7 +55,7 @@ const driverSchema = new mongoose.Schema({
 driverSchema.index({ email: 1 });
 driverSchema.index({ license_number: 1 });
 
-// Método virtual para obtener el nombre completo (opcional)
+// Método virtual para obtener el nombre completo 
 driverSchema.virtual('display_name').get(function() {
     return `${this.name} (${this.license_number})`;
 });

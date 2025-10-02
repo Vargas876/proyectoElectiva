@@ -22,9 +22,9 @@ export async function login(req, res) {
             });
         }
 
-        // 👇 CAMBIO: pasar objeto completo con id
+        
         const token = generateToken({ 
-            id: driver._id.toString(), // 👈 Importante: convertir a string
+            id: driver._id.toString(), 
             email: driver.email,
             name: driver.name
         });
@@ -52,7 +52,7 @@ export async function login(req, res) {
     }
 }
 
-// Verificar token (opcional pero útil)
+// Verificar token 
 export async function verifyToken(req, res) {
     try {
         // El middleware ya verificó el token y agregó req.user
@@ -87,7 +87,7 @@ export async function verifyToken(req, res) {
     }
 }
 
-// 👇 OPCIONAL: Función de registro si quieres permitir auto-registro de conductores
+//  OPCIONAL: Función de registro si quieres permitir auto-registro de conductores
 export async function register(req, res) {
     try {
         const { name, email, phone, license_number } = req.body;
