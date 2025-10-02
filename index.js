@@ -2,6 +2,11 @@ import express from 'express';
 import connectDB from './config/connect-db.mjs';
 import { specs, swaggerUi } from './config/swagger.mjs';
 
+// ✅ IMPORTACIONES ESTÁTICAS (en lugar de dinámicas)
+import authRouter from './routes/auth.mjs';
+import driverRouter from './routes/driver.mjs';
+import tripRouter from './routes/trip.mjs';
+
 const app = express();
 
 // Conectar a la base de datos
@@ -11,62 +16,41 @@ connectDB().catch(console.error);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
-// Headers de seguridad y CORS básico
+// Headers de seguridad y CORS
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
     
-    // Responder a preflight requests
     if (req.method === 'OPTIONS') {
         return res.sendStatus(200);
     }
     next();
 });
 
-// Swagger Documentation - Configuración mejorada para Vercel
+// Swagger Documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs, {
     customCss: `
         .swagger-ui .topbar { display: none }
         .swagger-ui .info { margin: 50px 0 }
-        .swagger-ui .scheme-container { background: #f8f8f8; padding: 15px; }
     `,
     customSiteTitle: "Driver & Trip API Documentation",
     swaggerOptions: {
         persistAuthorization: true,
         displayRequestDuration: true,
         filter: true,
-        // Evita problemas de carga en Vercel
         tryItOutEnabled: true
     }
 }));
 
-// Importar rutas condicionalmente con mejor logging
-try {
-    const { default: authRouter } = await import('./routes/auth.mjs');
-    app.use('/api/auth', authRouter);
-    console.log('✅ Auth routes loaded successfully');
-} catch (error) {
-    console.log('❌ Auth routes not available:', error.message);
-}
+// ✅ RUTAS - Montaje directo
+app.use('/api/auth', authRouter);
+app.use('/api/drivers', driverRouter);
+app.use('/api/trips', tripRouter);
 
-try {
-    const { default: driverRouter } = await import('./routes/driver.mjs');
-    app.use('/api/drivers', driverRouter);
-    console.log('✅ Driver routes loaded successfully');
-} catch (error) {
-    console.log('❌ Driver routes not available:', error.message);
-}
+console.log('✅ All routes loaded');
 
-try {
-    const { default: tripRouter } = await import('./routes/trip.mjs');
-    app.use('/api/trips', tripRouter);
-    console.log('✅ Trip routes loaded successfully');
-} catch (error) {
-    console.log('❌ Trip routes not available:', error.message);
-}
-
-// Root endpoint con información más completa
+// Root endpoint
 app.get('/', (req, res) => {
     res.status(200).json({ 
         message: 'Driver & Trip Management API Ready',
@@ -98,7 +82,7 @@ app.get('/', (req, res) => {
     });
 });
 
-// Health check más detallado
+// Health check
 app.get('/health', (req, res) => {
     res.json({ 
         status: 'OK',
@@ -110,7 +94,7 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Endpoint para verificar rutas disponibles
+// Status check
 app.get('/api/status', (req, res) => {
     res.json({
         success: true,
@@ -129,6 +113,8 @@ app.use('*', (req, res) => {
     res.status(404).json({
         success: false,
         message: 'Endpoint not found',
+        path: req.originalUrl,
+        method: req.method,
         availableEndpoints: {
             documentation: '/api-docs',
             health: '/health',
@@ -140,7 +126,7 @@ app.use('*', (req, res) => {
     });
 });
 
-// Error handler mejorado
+// Error handler
 app.use((err, req, res, next) => {
     console.error('Error details:', {
         message: err.message,
@@ -150,7 +136,6 @@ app.use((err, req, res, next) => {
         timestamp: new Date().toISOString()
     });
     
-    // No exponer detalles del error en producción
     const isDevelopment = process.env.NODE_ENV !== 'production';
     
     res.status(err.status || 500).json({
@@ -160,5 +145,13 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Para Vercel - NO uses app.listen()
+// Solo para desarrollo local
+const PORT = process.env.PORT || 3000;
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on http://localhost:${PORT}`);
+        console.log(`📚 Docs available at http://localhost:${PORT}/api-docs`);
+    });
+}
+
 export default app;
