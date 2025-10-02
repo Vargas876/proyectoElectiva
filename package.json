@@ -1,51 +1,26 @@
 {
-  "name": "proyectoelectiva",
+  "name": "driver-trip-api",
   "version": "1.0.0",
+  "description": "RESTful API for managing drivers and trips",
+  "main": "server.mjs",
   "type": "module",
-  "main": "index.js",
   "scripts": {
-    "start": "node index.js",
-    "dev": "nodemon index.js",
-    "build": "echo 'No build step required'",
-    "lint": "echo 'No linting configured'",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.mjs",
+    "dev": "nodemon server.mjs"
   },
-  "keywords": [
-    "api", 
-    "drivers", 
-    "trips", 
-    "uber", 
-    "nodejs", 
-    "express", 
-    "mongodb", 
-    "jwt", 
-    "swagger"
-  ],
-  "author": "Tu Nombre <tu@email.com>",
-  "license": "ISC",
-  "description": "API for managing drivers and trips with intelligent rating system - Similar to Uber",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/tuusuario/proyectoelectiva.git"
-  },
+  "keywords": ["api", "rest", "mongodb", "jwt"],
+  "author": "Your Name",
+  "license": "MIT",
   "dependencies": {
+    "express": "^4.18.2",
+    "mongoose": "^8.0.0",
     "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.18.1",
-    "morgan": "^1.10.1",
+    "swagger-ui-express": "^5.0.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^4.6.3"
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
-    "nodemon": "^3.1.10"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
-  },
-  "private": false,
-  "os": ["linux", "darwin", "win32"],
-  "cpu": ["x64", "arm64"]
+    "nodemon": "^3.0.1"
+  }
 }
