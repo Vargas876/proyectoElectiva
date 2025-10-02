@@ -1,169 +1,69 @@
-import Driver from '../models/Driver.mjs';
-import Trip from '../models/Trip.mjs';
+import mongoose from 'mongoose';
 
-async function findAll(req, res) {
-    try {
-        const trips = await Trip.find().populate('driver_id', 'name email phone');
-        res.status(200).json({
-            success: true,
-            data: trips,
-            total: trips.length
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error retrieving trips",
-            error: error.message
-        });
+const driverSchema = new mongoose.Schema({
+    name: {
+        type: String,
+        required: [true, 'El nombre es obligatorio'],
+        trim: true,
+        minlength: [3, 'El nombre debe tener al menos 3 caracteres']
+    },
+    email: {
+        type: String,
+        required: [true, 'El email es obligatorio'],
+        unique: true,
+        trim: true,
+        lowercase: true,
+        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Por favor ingresa un email válido']
+    },
+    phone: {
+        type: String,
+        required: [true, 'El teléfono es obligatorio'],
+        trim: true
+    },
+    license_number: {
+        type: String,
+        required: [true, 'El número de licencia es obligatorio'],
+        unique: true,
+        trim: true,
+        uppercase: true
+    },
+    rating: {
+        type: Number,
+        default: 5.0,
+        min: [0, 'El rating no puede ser menor a 0'],
+        max: [5, 'El rating no puede ser mayor a 5']
+    },
+    status: {
+        type: String,
+        enum: {
+            values: ['available', 'busy', 'offline'],
+            message: '{VALUE} no es un estado válido'
+        },
+        default: 'available'
+    },
+    total_trips: {
+        type: Number,
+        default: 0,
+        min: [0, 'El número de viajes no puede ser negativo']
     }
-}
+}, {
+    timestamps: true,  // Agrega createdAt y updatedAt automáticamente
+    versionKey: false  // Elimina el campo __v
+});
 
-async function findById(req, res) {
-    try {
-        const trip = await Trip.findById(req.params.id).populate('driver_id', 'name email phone rating');
-        
-        if (!trip) {
-            return res.status(404).json({
-                success: false,
-                message: "Trip not found"
-            });
-        }
-        
-        res.status(200).json({
-            success: true,
-            data: trip
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error retrieving trip",
-            error: error.message
-        });
-    }
-}
+// Índices para mejorar búsquedas
+driverSchema.index({ email: 1 });
+driverSchema.index({ license_number: 1 });
 
-async function save(req, res) {
-    try {
-        const { driver_id, origin, destination, departure_time, price, available_seats } = req.body;
-        
-        // Verificar que el conductor existe
-        const driverExists = await Driver.findById(driver_id);
-        if (!driverExists) {
-            return res.status(404).json({
-                success: false,
-                message: "Driver not found"
-            });
-        }
-        
-        const newTrip = new Trip({
-            driver_id,
-            origin,
-            destination,
-            departure_time,
-            price,
-            available_seats
-        });
-        
-        const savedTrip = await newTrip.save();
-        const populatedTrip = await Trip.findById(savedTrip._id).populate('driver_id', 'name email');
-        
-        res.status(201).json({
-            success: true,
-            message: "Trip created successfully",
-            data: populatedTrip
-        });
-    } catch (error) {
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                success: false,
-                message: "Validation error",
-                errors: Object.values(error.errors).map(err => err.message)
-            });
-        }
-        
-        res.status(500).json({
-            success: false,
-            message: "Error creating trip",
-            error: error.message
-        });
-    }
-}
+// Método virtual para obtener el nombre completo (opcional)
+driverSchema.virtual('display_name').get(function() {
+    return `${this.name} (${this.license_number})`;
+});
 
-async function update(req, res) {
-    try {
-        const { driver_id, origin, destination, departure_time, arrival_time, price, available_seats, status } = req.body;
-        
-        if (driver_id) {
-            const driverExists = await Driver.findById(driver_id);
-            if (!driverExists) {
-                return res.status(404).json({
-                    success: false,
-                    message: "Driver not found"
-                });
-            }
-        }
-        
-        const updatedTrip = await Trip.findByIdAndUpdate(
-            req.params.id,
-            { driver_id, origin, destination, departure_time, arrival_time, price, available_seats, status },
-            { new: true, runValidators: true }
-        ).populate('driver_id', 'name email');
-        
-        if (!updatedTrip) {
-            return res.status(404).json({
-                success: false,
-                message: "Trip not found"
-            });
-        }
-        
-        res.status(200).json({
-            success: true,
-            message: "Trip updated successfully",
-            data: updatedTrip
-        });
-    } catch (error) {
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                success: false,
-                message: "Validation error",
-                errors: Object.values(error.errors).map(err => err.message)
-            });
-        }
-        
-        res.status(500).json({
-            success: false,
-            message: "Error updating trip",
-            error: error.message
-        });
-    }
-}
-
-async function remove(req, res) {
-    try {
-        const deletedTrip = await Trip.findByIdAndDelete(req.params.id);
-        
-        if (!deletedTrip) {
-            return res.status(404).json({
-                success: false,
-                message: "Trip not found"
-            });
-        }
-        
-        res.status(200).json({
-            success: true,
-            message: "Trip deleted successfully"
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: "Error deleting trip",
-            error: error.message
-        });
-    }
-}
-
-export {
-  findAll,
-  findById, remove, save,
-  update
+// Método para incrementar el contador de viajes
+driverSchema.methods.incrementTrips = async function() {
+    this.total_trips += 1;
+    return await this.save();
 };
+
+export default mongoose.model('Driver', driverSchema);

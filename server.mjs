@@ -5,6 +5,7 @@ import swaggerUi from 'swagger-ui-express';
 import connectDB from './config/connect-db.mjs';
 import { generateToken } from './middlewares/auth.mjs';
 import { errorHandler, notFound } from './middlewares/errorHandler.mjs';
+import authRoutes from './routes/auth-routes.mjs';
 import driverRoutes from './routes/driver-routes.mjs';
 import tripRoutes from './routes/trip-routes.mjs';
 
@@ -89,14 +90,17 @@ app.post('/api/auth/login', (req, res) => {
 
 app.use('/api/drivers', driverRoutes);
 app.use('/api/trips', tripRoutes);
+app.use('/api/auth', authRoutes);  
+app.use('/api/drivers', driverRoutes);
+app.use('/api/trips', tripRoutes);
 
 // Error handlers
 app.use(notFound);
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on port ${PORT}`);
-    console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
+    console.log(`Server running on port ${PORT}`);
+    console.log(`API Documentation: http://localhost:${PORT}/api-docs`);
 });
 
 export default app;

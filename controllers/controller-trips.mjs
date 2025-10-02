@@ -1,15 +1,25 @@
-import Driver from "../models/Driver.mjs";
-import Trip from "../models/Trip.mjs";
-import { calculateTripRating, simulateActualDuration } from "../utils/ratingCalculator.mjs";
+import Driver from '../models/Driver.mjs';
+import Trip from '../models/Trip.mjs';
+import { calculateAverageRating, validateRating } from '../utils/ratingCalculator.mjs';
 
 // Obtener todos los viajes
 async function findAll(req, res) {
     try {
-        const result = await Trip.find().populate('driver_id', 'name rating');
+        const { status, driver_id } = req.query;
+        
+        // Filtros opcionales
+        const filter = {};
+        if (status) filter.status = status;
+        if (driver_id) filter.driver_id = driver_id;
+        
+        const trips = await Trip.find(filter)
+            .populate('driver_id', 'name email phone rating license_number')
+            .sort({ departure_time: -1 }); // Ordenar por fecha más reciente
+        
         res.status(200).json({
             success: true,
-            data: result,
-            total: result.length
+            data: trips,
+            total: trips.length
         });
     } catch (error) {
         res.status(500).json({
@@ -20,13 +30,13 @@ async function findAll(req, res) {
     }
 }
 
-// Buscar un viaje por ID
+// Obtener un viaje por ID
 async function findById(req, res) {
     try {
-        const { id } = req.params;
-        const result = await Trip.findById(id).populate('driver_id', 'name rating phone');
+        const trip = await Trip.findById(req.params.id)
+            .populate('driver_id', 'name email phone rating license_number status');
         
-        if (!result) {
+        if (!trip) {
             return res.status(404).json({
                 success: false,
                 message: "Viaje no encontrado"
@@ -35,7 +45,7 @@ async function findById(req, res) {
         
         res.status(200).json({
             success: true,
-            data: result
+            data: trip
         });
     } catch (error) {
         res.status(500).json({
@@ -49,16 +59,17 @@ async function findById(req, res) {
 // Crear un nuevo viaje
 async function save(req, res) {
     try {
-        const { driver_id, origin, destination, departure_time, price, available_seats } = req.body;
+        const { 
+            driver_id, 
+            origin, 
+            destination, 
+            departure_time, 
+            price, 
+            available_seats,
+            distance_km,
+            duration_minutes
+        } = req.body;
         
-        // Validación básica
-        if (!driver_id || !origin || !destination || !departure_time || !price) {
-            return res.status(400).json({
-                success: false,
-                message: "Faltan campos obligatorios: driver_id, origin, destination, departure_time, price"
-            });
-        }
-
         // Verificar que el conductor existe
         const driver = await Driver.findById(driver_id);
         if (!driver) {
@@ -68,27 +79,52 @@ async function save(req, res) {
             });
         }
         
-        const record = {
+        // Verificar que el conductor esté disponible
+        if (driver.status !== 'available') {
+            return res.status(400).json({
+                success: false,
+                message: `El conductor no está disponible. Estado actual: ${driver.status}`
+            });
+        }
+        
+        // Crear el nuevo viaje
+        const newTrip = new Trip({
             driver_id,
             origin,
             destination,
-            departure_time: new Date(departure_time),
-            arrival_time: null,
-            price: parseFloat(price),
+            departure_time,
+            price,
             available_seats: available_seats || 4,
-            status: "scheduled",
-            createdAt: new Date()
-        };
+            distance_km,
+            duration_minutes
+        });
         
-        const result = await Trip.create(record);
-        const populatedResult = await Trip.findById(result._id).populate('driver_id', 'name rating');
+        const savedTrip = await newTrip.save();
+        
+        // Actualizar el estado del conductor a 'busy'
+        driver.status = 'busy';
+        await driver.save();
+        
+        // Incrementar el contador de viajes del conductor
+        await driver.incrementTrips();
+        
+        const populatedTrip = await Trip.findById(savedTrip._id)
+            .populate('driver_id', 'name email phone rating');
         
         res.status(201).json({
             success: true,
             message: "Viaje creado exitosamente",
-            data: populatedResult
+            data: populatedTrip
         });
     } catch (error) {
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                success: false,
+                message: "Error de validación",
+                errors: Object.values(error.errors).map(err => err.message)
+            });
+        }
+        
         res.status(500).json({
             success: false,
             message: "Error al crear el viaje",
@@ -100,76 +136,80 @@ async function save(req, res) {
 // Actualizar un viaje
 async function update(req, res) {
     try {
-        const { id } = req.params;
-        const { driver_id, origin, destination, departure_time, arrival_time, price, available_seats, status } = req.body;
+        const { 
+            driver_id, 
+            origin, 
+            destination, 
+            departure_time, 
+            arrival_time, 
+            price, 
+            available_seats, 
+            status,
+            distance_km,
+            duration_minutes
+        } = req.body;
         
-        const updateData = {};
-        if (driver_id) updateData.driver_id = driver_id;
-        if (origin) updateData.origin = origin;
-        if (destination) updateData.destination = destination;
-        if (departure_time) updateData.departure_time = new Date(departure_time);
-        if (arrival_time) updateData.arrival_time = new Date(arrival_time);
-        if (price) updateData.price = parseFloat(price);
-        if (available_seats) updateData.available_seats = parseInt(available_seats);
-        if (status) updateData.status = status;
-        
-        updateData.updatedAt = new Date();
-        
-        const trip = await Trip.findById(id);
-        if (!trip) {
+        // Buscar el viaje actual
+        const currentTrip = await Trip.findById(req.params.id);
+        if (!currentTrip) {
             return res.status(404).json({
                 success: false,
                 message: "Viaje no encontrado"
             });
         }
-
-        // Si el viaje se está completando manualmente, actualizar rating automáticamente
-        if (status === 'completed' && trip.status !== 'completed') {
-            const driver = await Driver.findById(trip.driver_id);
-            if (driver) {
-                // Simular duración real del viaje
-                const actual_duration = simulateActualDuration(
-                    trip.estimated_duration_minutes,
-                    trip.weather_condition,
-                    trip.time_of_day
-                );
-
-                // Calcular rating inteligente
-                const ratingResult = calculateTripRating({
-                    estimated_duration_minutes: trip.estimated_duration_minutes,
-                    actual_duration_minutes: actual_duration,
-                    weather_condition: trip.weather_condition,
-                    time_of_day: trip.time_of_day,
-                    distance_km: trip.distance_km,
-                    driver_current_rating: driver.rating
+        
+        // Si se cambia el conductor, verificar que existe
+        if (driver_id && driver_id !== currentTrip.driver_id.toString()) {
+            const newDriver = await Driver.findById(driver_id);
+            if (!newDriver) {
+                return res.status(404).json({
+                    success: false,
+                    message: "Nuevo conductor no encontrado"
                 });
-
-                updateData.actual_duration_minutes = actual_duration;
-                updateData.trip_rating = ratingResult.final_rating;
-                updateData.rating_factors = ratingResult.factors;
-                updateData.arrival_time = updateData.arrival_time || new Date();
-                
-                // Actualizar rating del conductor
-                driver.total_trips += 1;
-                driver.total_rating_points += ratingResult.final_rating;
-                driver.rating = Math.round((driver.total_rating_points / (driver.total_trips + 1)) * 10) / 10;
-                await driver.save();
-                
-                console.log(`Viaje completado! Rating del viaje: ${ratingResult.final_rating}. Nuevo rating del conductor: ${driver.rating}`);
             }
         }
         
-        const result = await Trip.findByIdAndUpdate(id, updateData, { new: true, runValidators: true })
-                                   .populate('driver_id', 'name rating total_trips');
+        // Actualizar el viaje
+        const updatedTrip = await Trip.findByIdAndUpdate(
+            req.params.id,
+            { 
+                driver_id, 
+                origin, 
+                destination, 
+                departure_time, 
+                arrival_time, 
+                price, 
+                available_seats, 
+                status,
+                distance_km,
+                duration_minutes
+            },
+            { new: true, runValidators: true }
+        ).populate('driver_id', 'name email phone rating');
+        
+        // Si el viaje se completó, actualizar el estado del conductor a 'available'
+        if (status === 'completed') {
+            const driver = await Driver.findById(updatedTrip.driver_id);
+            if (driver) {
+                driver.status = 'available';
+                await driver.save();
+            }
+        }
         
         res.status(200).json({
             success: true,
-            message: status === 'completed' ? 
-                    `Viaje completado exitosamente! Rating actualizado automáticamente: ${result.trip_rating}` : 
-                    "Viaje actualizado exitosamente",
-            data: result
+            message: "Viaje actualizado exitosamente",
+            data: updatedTrip
         });
     } catch (error) {
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                success: false,
+                message: "Error de validación",
+                errors: Object.values(error.errors).map(err => err.message)
+            });
+        }
+        
         res.status(500).json({
             success: false,
             message: "Error al actualizar el viaje",
@@ -179,22 +219,30 @@ async function update(req, res) {
 }
 
 // Eliminar un viaje
-async function deleteTrip(req, res) {
+async function remove(req, res) {
     try {
-        const { id } = req.params;
-        const result = await Trip.findByIdAndDelete(id);
+        const deletedTrip = await Trip.findByIdAndDelete(req.params.id);
         
-        if (!result) {
+        if (!deletedTrip) {
             return res.status(404).json({
                 success: false,
                 message: "Viaje no encontrado"
             });
         }
         
+        // Si el viaje estaba en progreso, liberar al conductor
+        if (deletedTrip.status === 'in_progress' || deletedTrip.status === 'scheduled') {
+            const driver = await Driver.findById(deletedTrip.driver_id);
+            if (driver && driver.status === 'busy') {
+                driver.status = 'available';
+                await driver.save();
+            }
+        }
+        
         res.status(200).json({
             success: true,
             message: "Viaje eliminado exitosamente",
-            data: result
+            data: deletedTrip
         });
     } catch (error) {
         res.status(500).json({
@@ -205,105 +253,158 @@ async function deleteTrip(req, res) {
     }
 }
 
-// Completar viaje con rating inteligente (endpoint específico)
-async function completeTrip(req, res) {
+// Agregar un pasajero a un viaje
+async function addPassenger(req, res) {
     try {
-        const { id } = req.params;
+        const { name, phone, seats_reserved } = req.body;
         
-        const trip = await Trip.findById(id);
+        if (!name || !phone || !seats_reserved) {
+            return res.status(400).json({
+                success: false,
+                message: "Nombre, teléfono y número de asientos son obligatorios"
+            });
+        }
+        
+        const trip = await Trip.findById(req.params.id);
+        
         if (!trip) {
             return res.status(404).json({
                 success: false,
                 message: "Viaje no encontrado"
             });
         }
-
-        if (trip.status === 'completed') {
+        
+        if (trip.status !== 'scheduled') {
             return res.status(400).json({
                 success: false,
-                message: "El viaje ya está completado"
+                message: "Solo se pueden agregar pasajeros a viajes programados"
             });
         }
+        
+        // Usar el método del modelo para agregar pasajero
+        await trip.addPassenger({ name, phone, seats_reserved });
+        
+        const updatedTrip = await Trip.findById(trip._id)
+            .populate('driver_id', 'name email phone');
+        
+        res.status(200).json({
+            success: true,
+            message: "Pasajero agregado exitosamente",
+            data: updatedTrip
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
 
+// Calificar un viaje (actualiza el rating del conductor)
+async function rateTrip(req, res) {
+    try {
+        const { rating } = req.body;
+        
+        // Validar el rating
+        const validatedRating = validateRating(rating);
+        
+        const trip = await Trip.findById(req.params.id);
+        
+        if (!trip) {
+            return res.status(404).json({
+                success: false,
+                message: "Viaje no encontrado"
+            });
+        }
+        
+        if (trip.status !== 'completed') {
+            return res.status(400).json({
+                success: false,
+                message: "Solo se pueden calificar viajes completados"
+            });
+        }
+        
+        // Obtener el conductor
         const driver = await Driver.findById(trip.driver_id);
+        
         if (!driver) {
             return res.status(404).json({
                 success: false,
                 message: "Conductor no encontrado"
             });
         }
-
-        // Simular duración real del viaje
-        const actual_duration = simulateActualDuration(
-            trip.estimated_duration_minutes,
-            trip.weather_condition,
-            trip.time_of_day
-        );
-
-        // Calcular rating inteligente
-        const ratingResult = calculateTripRating({
-            estimated_duration_minutes: trip.estimated_duration_minutes,
-            actual_duration_minutes: actual_duration,
-            weather_condition: trip.weather_condition,
-            time_of_day: trip.time_of_day,
-            distance_km: trip.distance_km,
-            driver_current_rating: driver.rating
-        });
-
-        // Actualizar el viaje
-        trip.status = 'completed';
-        trip.arrival_time = new Date();
-        trip.actual_duration_minutes = actual_duration;
-        trip.trip_rating = ratingResult.final_rating;
-        trip.rating_factors = ratingResult.factors;
-        await trip.save();
-
-        // Actualizar rating del conductor
-        driver.total_trips += 1;
-        driver.total_rating_points += ratingResult.final_rating;
-        driver.rating = Math.round((driver.total_rating_points / (driver.total_trips + 1)) * 10) / 10;
+        
+        // Calcular nuevo rating del conductor
+        // Fórmula: (rating_actual * total_viajes + nuevo_rating) / (total_viajes + 1)
+        const currentTotal = driver.rating * Math.max(driver.total_trips - 1, 1);
+        const newRating = calculateAverageRating([currentTotal, validatedRating]);
+        
+        driver.rating = newRating;
         await driver.save();
-
-        const result = await Trip.findById(id).populate('driver_id', 'name rating total_trips');
-
+        
         res.status(200).json({
             success: true,
-            message: `Viaje completado con rating inteligente!`,
-            data: result,
-            rating_analysis: {
-                trip_rating: ratingResult.final_rating,
-                factors: ratingResult.factors,
-                analysis: {
-                    delay_minutes: ratingResult.analysis.delay_minutes,
-                    weather_impact: ratingResult.analysis.weather_impact,
-                    time_impact: ratingResult.analysis.time_impact,
-                    driver_bonus: ratingResult.analysis.driver_bonus,
-                    estimated_duration: trip.estimated_duration_minutes,
-                    actual_duration: actual_duration,
-                    distance: trip.distance_km,
-                    weather: trip.weather_condition,
-                    time_of_day: trip.time_of_day
-                },
-                driver_stats: {
-                    previous_rating: ratingResult.analysis.driver_bonus + 4.0,
-                    new_rating: driver.rating,
-                    total_trips: driver.total_trips
-                }
+            message: "Viaje calificado exitosamente",
+            data: {
+                trip_id: trip._id,
+                driver_id: driver._id,
+                driver_name: driver.name,
+                new_rating: newRating,
+                rating_given: validatedRating
+            }
+        });
+    } catch (error) {
+        res.status(400).json({
+            success: false,
+            message: error.message
+        });
+    }
+}
+
+// Obtener estadísticas de viajes
+async function getStatistics(req, res) {
+    try {
+        const { driver_id } = req.query;
+        
+        const filter = driver_id ? { driver_id } : {};
+        
+        const totalTrips = await Trip.countDocuments(filter);
+        const completedTrips = await Trip.countDocuments({ ...filter, status: 'completed' });
+        const scheduledTrips = await Trip.countDocuments({ ...filter, status: 'scheduled' });
+        const inProgressTrips = await Trip.countDocuments({ ...filter, status: 'in_progress' });
+        const cancelledTrips = await Trip.countDocuments({ ...filter, status: 'cancelled' });
+        
+        // Calcular ingresos totales de viajes completados
+        const revenueData = await Trip.aggregate([
+            { $match: { ...filter, status: 'completed' } },
+            { $group: { _id: null, totalRevenue: { $sum: '$price' } } }
+        ]);
+        
+        const totalRevenue = revenueData.length > 0 ? revenueData[0].totalRevenue : 0;
+        
+        res.status(200).json({
+            success: true,
+            data: {
+                total_trips: totalTrips,
+                completed: completedTrips,
+                scheduled: scheduledTrips,
+                in_progress: inProgressTrips,
+                cancelled: cancelledTrips,
+                total_revenue: totalRevenue,
+                completion_rate: totalTrips > 0 ? ((completedTrips / totalTrips) * 100).toFixed(2) + '%' : '0%'
             }
         });
     } catch (error) {
         res.status(500).json({
             success: false,
-            message: "Error al completar el viaje",
+            message: "Error al obtener estadísticas",
             error: error.message
         });
     }
 }
 
 export {
-    completeTrip, deleteTrip,
-    findAll,
-    findById,
-    save,
+    addPassenger, findAll,
+    findById, getStatistics, rateTrip, remove, save,
     update
 };
