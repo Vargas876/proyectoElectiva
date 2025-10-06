@@ -7,7 +7,6 @@ API RESTful tipo Uber para gestión de conductores y viajes con sistema de ratin
 - ✅ CRUD completo para Conductores y Viajes
 - 🔐 Autenticación JWT
 - ⭐ Sistema de rating automático inteligente
-- 📊 Análisis de factores de rating (clima, puntualidad, eficiencia)
 - 📚 Documentación Swagger
 - ☁️ Desplegado en la nube
 
