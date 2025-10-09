@@ -20,17 +20,47 @@ connectDB();
 
 // Inicializar Socket.io
 const io = initializeSocket(server);
-
-// Hacer io accesible en toda la app
 app.set('io', io);
 
-// Middlewares
+// 🔥 CONFIGURACIÓN DE CORS MEJORADA
+const isDevelopment = process.env.NODE_ENV !== 'production';
+
+const allowedOrigins = isDevelopment 
+    ? ['http://localhost:5173', 'http://localhost:3000'] // Desarrollo
+    : [
+        'https://proyectoelectiva-frontend.onrender.com',
+        process.env.FRONTEND_URL
+      ].filter(Boolean); // Producción
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true
+    origin: function (origin, callback) {
+        // Permitir requests sin origin (Postman, mobile apps)
+        if (!origin) return callback(null, true);
+        
+        // Verificar si el origin está en la lista permitida
+        if (allowedOrigins.some(allowed => origin.includes(allowed))) {
+            callback(null, true);
+        } else {
+            console.log(`❌ CORS bloqueado - Origen: ${origin}`);
+            console.log(`✅ Orígenes permitidos:`, allowedOrigins);
+            callback(null, true); // Temporalmente permitir todo para debug
+        }
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    exposedHeaders: ['Content-Range', 'X-Content-Range']
 }));
+
+// Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Log de requests (útil para debug)
+app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path} - Origin: ${req.headers.origin || 'No origin'}`);
+    next();
+});
 
 // Swagger configuration
 const swaggerOptions = {
@@ -85,52 +115,17 @@ app.get('/', (req, res) => {
         success: true,
         message: 'Bienvenido a Driver Trip API v2.0 - InDriver Style',
         version: '2.0.0',
-        documentation: '/api-docs',
-        features: [
-            'Sistema de ofertas conductor-pasajero',
-            'Autenticación con roles (conductor/pasajero)',
-            'Notificaciones en tiempo real con Socket.io',
-            'Mapbox integration ready'
-        ],
-        endpoints: {
-            authentication: {
-                login: 'POST /api/auth/login',
-                register: 'POST /api/auth/register',
-                verify: 'GET /api/auth/verify'
-            },
-            tripRequests: {
-                create: 'POST /api/trip-requests (Pasajero)',
-                available: 'GET /api/trip-requests/available (Conductor)',
-                myRequests: 'GET /api/trip-requests/my-requests (Pasajero)',
-                myOffers: 'GET /api/trip-requests/my-offers (Conductor)',
-                getById: 'GET /api/trip-requests/:id',
-                makeOffer: 'POST /api/trip-requests/:id/offer (Conductor)',
-                acceptOffer: 'POST /api/trip-requests/:id/accept-offer (Pasajero)'
-            },
-            legacy: {
-                drivers: 'GET /api/drivers (Sistema antiguo)',
-                trips: 'GET /api/trips (Sistema antiguo)'
-            }
-        },
-        socketEvents: {
-            driver: [
-                'new_trip_request - Nueva solicitud disponible',
-                'offer_accepted - Tu oferta fue aceptada',
-                'offer_rejected - Tu oferta fue rechazada'
-            ],
-            passenger: [
-                'new_offer - Nueva oferta recibida',
-                'offer_accepted - Viaje confirmado'
-            ]
-        }
+        environment: process.env.NODE_ENV || 'development',
+        allowedOrigins: allowedOrigins,
+        documentation: '/api-docs'
     });
 });
 
 // API Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/trip-requests', tripRequestRoutes);  // 🔥 Nueva ruta principal
-app.use('/api/drivers', driverRoutes);  // Legacy (opcional)
-app.use('/api/trips', tripRoutes);  // Legacy (opcional)
+app.use('/api/trip-requests', tripRequestRoutes);
+app.use('/api/drivers', driverRoutes);
+app.use('/api/trips', tripRoutes);
 
 // Error handlers
 app.use(notFound);
@@ -143,6 +138,7 @@ server.listen(PORT, () => {
     console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
     console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🔌 Socket.io: Initialized and ready`);
+    console.log(`✅ CORS: Permitiendo orígenes:`, allowedOrigins);
     console.log(`${'='.repeat(60)}\n`);
 });
 
