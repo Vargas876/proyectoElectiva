@@ -100,6 +100,13 @@ tripSchema.methods.addPassenger = async function(passengerData) {
     
     return await this.save();
 };
+// models/Trip.mjs - AGREGAR:
+tripSchema.methods.removePassenger = async function(passengerId) {
+    this.passengers = this.passengers.filter(p => p._id.toString() !== passengerId);
+    const removedSeats = this.passengers.find(p => p._id.toString() === passengerId)?.seats_reserved || 0;
+    this.available_seats += removedSeats;
+    return await this.save();
+  };
 
 // Middleware pre-save para validaciones adicionales
 tripSchema.pre('save', function(next) {

@@ -66,5 +66,8 @@ const driverSchema = new mongoose.Schema({
 
 driverSchema.index({ email: 1 });
 driverSchema.index({ license_number: 1 });
-
+driverSchema.methods.incrementTrips = async function() {
+  this.total_trips += 1;
+  return await this.save();
+};
 export default mongoose.model('Driver', driverSchema);

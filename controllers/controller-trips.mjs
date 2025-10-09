@@ -86,6 +86,13 @@ async function save(req, res) {
                 message: `El conductor no está disponible. Estado actual: ${driver.status}`
             });
         }
+        // En save() - AGREGAR validación
+        if (new Date(departure_time) <= new Date()) {
+            return res.status(400).json({
+            success: false,
+            message: 'La fecha de salida debe ser futura'
+            });
+        }
         
         // Crear el nuevo viaje
         const newTrip = new Trip({
