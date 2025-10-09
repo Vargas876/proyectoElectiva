@@ -273,8 +273,3 @@ export async function getMyOffers(req, res) {
     }
 }
 
-export {
-    acceptOffer, createTripRequest,
-    getAvailableRequests, getMyOffers, getMyRequests, getTripRequestById,
-    makeOffer
-};
