@@ -1,27 +1,26 @@
-// middlewares/errorHandler.mjs - MEJORAR:
-export const errorHandler = (err, req, res, next) => {
-    console.error('❌ Error:', err);
-    
-    // Errores de Mongoose
-    if (err.name === 'ValidationError') {
-      return res.status(400).json({
-        success: false,
-        message: 'Error de validación',
-        errors: Object.values(err.errors).map(e => e.message)
-      });
-    }
-    
-    if (err.name === 'CastError') {
-      return res.status(400).json({
-        success: false,
-        message: 'ID inválido'
-      });
-    }
-    
-    // Error por defecto
-    res.status(err.status || 500).json({
+// middlewares/errorHandler.mjs
+
+// Middleware para manejar rutas no encontradas (404)
+export const notFound = (req, res, next) => {
+    res.status(404).json({
       success: false,
-      message: err.message || 'Error interno del servidor',
-      ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+      message: `Route ${req.originalUrl} not found`
     });
   };
+  
+  // Middleware para manejar errores generales
+  export const errorHandler = (err, req, res, next) => {
+    console.error('Error:', err);
+    
+    const statusCode = err.status || err.statusCode || 500;
+    
+    res.status(statusCode).json({
+      success: false,
+      message: err.message || 'Internal server error',
+      ...(process.env.NODE_ENV === 'development' && {
+        error: err.message,
+        stack: err.stack
+      })
+    });
+  };
+  
