@@ -1,4 +1,3 @@
-// server.mjs
 import cors from "cors";
 import dotenv from "dotenv";
 import express from "express";
@@ -31,10 +30,10 @@ const httpServer = createServer(app);
 // CONFIGURACIÓN DE CORS
 // ============================================
 const allowedOrigins = [
-  'http://localhost:5173',                                    // Frontend local
-  'http://localhost:3000',                                    // Backend local
-  'https://proyectoelectiva-frontend.onrender.com',          // Frontend producción
-  'https://proyectoelectiva-pyl0.onrender.com'               // Backend producción
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'https://proyectoelectiva-frontend.onrender.com',
+  'https://proyectoelectiva-pyl0.onrender.com'
 ];
 
 app.use(cors({
@@ -87,7 +86,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   }
 }));
 
-// Ruta para obtener el JSON de Swagger
 app.get('/api-docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
@@ -127,20 +125,59 @@ app.get("/", (req, res) => {
 });
 
 // ============================================
-// SOCKET.IO EVENTOS
+// SOCKET.IO EVENTOS (✅ CORREGIDO)
 // ============================================
 io.on('connection', (socket) => {
   console.log('✅ Usuario conectado:', socket.id);
 
+  // Unirse a sala de viaje
   socket.on('join_trip', (tripId) => {
     socket.join(`trip_${tripId}`);
     console.log(`👤 Usuario ${socket.id} se unió al viaje ${tripId}`);
+    
+    // Notificar a otros en la sala
+    socket.to(`trip_${tripId}`).emit('user_joined', {
+      message: 'Un nuevo usuario se unió al chat',
+      socketId: socket.id
+    });
   });
 
+  // ✅ RECIBIR Y REENVIAR MENSAJE
   socket.on('send_message', (data) => {
-    io.to(`trip_${data.tripId}`).emit('new_message', data);
+    console.log('📨 Mensaje recibido en servidor:', data);
+    
+    const { tripId, message, sender } = data;
+    
+    // Crear objeto de mensaje completo
+    const fullMessage = {
+      tripId,
+      message,
+      sender: sender || {
+        id: 'unknown',
+        name: 'Usuario'
+      },
+      timestamp: new Date().toISOString(),
+      socketId: socket.id
+    };
+    
+    console.log('📤 Reenviando mensaje a sala:', `trip_${tripId}`);
+    
+    // Enviar a TODA la sala (incluyendo al remitente)
+    io.to(`trip_${tripId}`).emit('new_message', fullMessage);
   });
 
+  // Salir de sala de viaje
+  socket.on('leave_trip', (tripId) => {
+    socket.leave(`trip_${tripId}`);
+    console.log(`👋 Usuario ${socket.id} salió del viaje ${tripId}`);
+    
+    socket.to(`trip_${tripId}`).emit('user_left', {
+      message: 'Un usuario salió del chat',
+      socketId: socket.id
+    });
+  });
+
+  // Desconexión
   socket.on('disconnect', () => {
     console.log('❌ Usuario desconectado:', socket.id);
   });

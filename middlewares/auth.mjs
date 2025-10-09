@@ -1,14 +1,15 @@
+// middlewares/auth.mjs
 import jwt from 'jsonwebtoken';
 
 export const authenticateToken = (req, res, next) => {
   try {
     const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+    const token = authHeader && authHeader.split(' ')[1];
 
     if (!token) {
       return res.status(401).json({
         success: false,
-        message: 'Acceso denegado. No se proporcionó token.',
+        message: 'Token no proporcionado'
       });
     }
 
@@ -16,23 +17,20 @@ export const authenticateToken = (req, res, next) => {
       if (err) {
         return res.status(403).json({
           success: false,
-          message: 'Token inválido o expirado.',
+          message: 'Token inválido'
         });
       }
 
+      // ✅ AGREGAR EL USUARIO A req.user
       req.user = user;
-      next();
+      next(); // ← IMPORTANTE: Llamar next() para continuar
     });
   } catch (error) {
-    console.error('Error en authenticateToken:', error);
     return res.status(500).json({
       success: false,
-      message: 'Error interno del servidor',
+      message: 'Error en autenticación'
     });
   }
 };
-
-// Alias para mantener compatibilidad
-export const verifyToken = authenticateToken;
 
 export default authenticateToken;

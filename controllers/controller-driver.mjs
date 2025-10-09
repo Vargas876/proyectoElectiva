@@ -1,4 +1,5 @@
 import Driver from '../models/Driver.mjs';
+import Rewards from '../models/Rewards.mjs';
 
 // Obtener todos los conductores
 async function findAll(req, res) {
@@ -17,11 +18,12 @@ async function findAll(req, res) {
         });
     }
 }
-
-// Obtener conductor por ID
+// ✅ OBTENER CONDUCTOR POR ID (CON REWARDS)
 async function findById(req, res) {
     try {
-        const driver = await Driver.findById(req.params.id);
+        const { id } = req.params;
+
+        const driver = await Driver.findById(id);
         
         if (!driver) {
             return res.status(404).json({
@@ -29,12 +31,44 @@ async function findById(req, res) {
                 message: "Driver not found"
             });
         }
+
+        // ✅ OBTENER REWARDS DEL CONDUCTOR
+        console.log('📊 Buscando rewards para driver:', id);
+        const rewards = await Rewards.findOne({ driver_id: id });
+        console.log('🎁 Rewards encontrados:', rewards);
+
+        // Combinar datos
+        const driverWithRewards = {
+            ...driver.toObject(),
+            rewards: rewards ? {
+                points: rewards.points || 0,
+                level: rewards.level || 1,
+                badges: rewards.badges || [],
+                achievements: rewards.achievements || [],
+                streaks: rewards.streaks || {
+                    current_streak: 0,
+                    longest_streak: 0
+                }
+            } : {
+                points: 0,
+                level: 1,
+                badges: [],
+                achievements: [],
+                streaks: {
+                    current_streak: 0,
+                    longest_streak: 0
+                }
+            }
+        };
+
+        console.log('✅ Driver con rewards combinado:', driverWithRewards);
         
         res.status(200).json({
             success: true,
-            data: driver
+            data: driverWithRewards
         });
     } catch (error) {
+        console.error('❌ Error en findById:', error);
         res.status(500).json({
             success: false,
             message: "Error retrieving driver",
@@ -42,6 +76,7 @@ async function findById(req, res) {
         });
     }
 }
+
 
 // Crear conductor con validación y campos completos
 async function save(req, res) {
@@ -88,6 +123,19 @@ async function save(req, res) {
         });
         
         const savedDriver = await newDriver.save();
+
+        // ✅ CREAR REWARDS PARA EL NUEVO CONDUCTOR
+        await Rewards.create({
+            driver_id: savedDriver._id,
+            points: 0,
+            level: 1,
+            badges: [],
+            achievements: [],
+            streaks: {
+                current_streak: 0,
+                longest_streak: 0
+            }
+        });
         
         res.status(201).json({
             success: true,
@@ -117,8 +165,6 @@ async function save(req, res) {
         });
     }
 }
-
-//  Actualizar con todos los campos
 async function update(req, res) {
     try {
         const { 
@@ -130,10 +176,21 @@ async function update(req, res) {
             status,
             vehicle_type,
             vehicle_plate,
-            vehicle_capacity 
+            vehicle_capacity,
+            vehicle_model,    // ← IMPORTANTE
+            vehicle_year,     // ← IMPORTANTE
+            vehicle_color,    // ← IMPORTANTE
+            bio
         } = req.body;
         
-        // Preparar objeto de actualización solo con campos proporcionados
+        console.log('📝 ===== ACTUALIZANDO DRIVER =====');
+        console.log('📝 ID:', req.params.id);
+        console.log('📝 Body completo:', req.body);
+        console.log('📝 vehicle_model recibido:', vehicle_model);
+        console.log('📝 vehicle_year recibido:', vehicle_year);
+        console.log('📝 vehicle_color recibido:', vehicle_color);
+        
+        // Preparar objeto de actualización
         const updateData = {};
         if (name) updateData.name = name.trim();
         if (email) updateData.email = email.toLowerCase().trim();
@@ -144,6 +201,16 @@ async function update(req, res) {
         if (vehicle_type) updateData.vehicle_type = vehicle_type;
         if (vehicle_plate) updateData.vehicle_plate = vehicle_plate.toUpperCase().trim();
         if (vehicle_capacity) updateData.vehicle_capacity = vehicle_capacity;
+        
+        // ✅ ESTOS SON LOS IMPORTANTES
+        if (vehicle_model) updateData.vehicle_model = vehicle_model.trim();
+        if (vehicle_year) updateData.vehicle_year = vehicle_year;
+        if (vehicle_color) updateData.vehicle_color = vehicle_color.trim();
+        if (bio) updateData.bio = bio.trim();
+        
+        console.log('📝 Datos a actualizar:', updateData);
+        console.log('📝 vehicle_model en updateData:', updateData.vehicle_model);
+        console.log('📝 vehicle_year en updateData:', updateData.vehicle_year);
         
         const updatedDriver = await Driver.findByIdAndUpdate(
             req.params.id,
@@ -158,12 +225,18 @@ async function update(req, res) {
             });
         }
         
+        console.log('✅ Driver actualizado:', updatedDriver);
+        console.log('✅ vehicle_model después:', updatedDriver.vehicle_model);
+        console.log('✅ vehicle_year después:', updatedDriver.vehicle_year);
+        
         res.status(200).json({
             success: true,
             message: "Driver updated successfully",
             data: updatedDriver
         });
     } catch (error) {
+        console.error('❌ Error al actualizar:', error);
+        
         if (error.name === 'ValidationError') {
             return res.status(400).json({
                 success: false,
@@ -187,6 +260,7 @@ async function update(req, res) {
     }
 }
 
+
 // Eliminar conductor
 async function remove(req, res) {
     try {
@@ -198,6 +272,9 @@ async function remove(req, res) {
                 message: "Driver not found"
             });
         }
+
+        // ✅ ELIMINAR TAMBIÉN SUS REWARDS
+        await Rewards.findOneAndDelete({ driver_id: req.params.id });
         
         res.status(200).json({
             success: true,

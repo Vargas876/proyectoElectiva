@@ -3,6 +3,13 @@ import { findAll, findById, remove, save, update } from '../controllers/controll
 import { authenticateToken } from '../middlewares/auth.mjs';
 
 const router = express.Router();
+// ✅ MIDDLEWARE DE DEBUG - AGREGAR AL INICIO
+router.use((req, res, next) => {
+    console.log(`🔵 [DRIVER ROUTE] ${req.method} ${req.path}`);
+    console.log('🔵 Body:', req.body);
+    console.log('🔵 Headers:', req.headers.authorization ? '✅ Con token' : '❌ Sin token');
+    next();
+  });
 
 /**
  * @swagger

@@ -1,5 +1,4 @@
 import Rewards from '../models/Rewards.mjs';
-
 // Obtener recompensas del usuario actual
 export const getMyRewards = async (req, res) => {
   try {
@@ -61,8 +60,6 @@ export const getRewardsByDriver = async (req, res) => {
     });
   }
 };
-
-// Obtener leaderboard
 export const getLeaderboard = async (req, res) => {
   try {
     const { limit = 10, sortBy = 'points' } = req.query;
@@ -73,11 +70,38 @@ export const getLeaderboard = async (req, res) => {
     const leaderboard = await Rewards.find()
       .sort(sortOptions)
       .limit(parseInt(limit))
-      .populate('driver_id', 'name email rating total_trips');
+      .populate({
+        path: 'driver_id',
+        select: 'name email rating total_trips completed_trips badges profile_image'
+      });
+
+    // ✅ MAPEAR CORRECTAMENTE
+    const enrichedLeaderboard = leaderboard.map((reward, index) => {
+      const driver = reward.driver_id;
+      
+      return {
+        rank: index + 1,
+        driver: {
+          id: driver._id,
+          name: driver.name,
+          email: driver.email,
+          rating: driver.rating || 0,
+          total_trips: driver.total_trips || 0,
+          completed_trips: driver.completed_trips || 0,
+          profile_image: driver.profile_image
+        },
+        rewards: {
+          points: reward.points,
+          level: reward.level,
+          badges: driver.badges || [],
+          achievements: reward.achievements || []
+        }
+      };
+    });
 
     return res.status(200).json({
       success: true,
-      data: leaderboard
+      data: enrichedLeaderboard
     });
   } catch (error) {
     console.error('Error en getLeaderboard:', error);
@@ -87,6 +111,8 @@ export const getLeaderboard = async (req, res) => {
     });
   }
 };
+
+
 
 // Reclamar badge
 export const claimBadge = async (req, res) => {
