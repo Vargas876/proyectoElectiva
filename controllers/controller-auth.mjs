@@ -1,21 +1,21 @@
 import { generateToken } from '../middlewares/auth.mjs';
-import Driver from '../models/Driver.mjs';
+import User from '../models/User.mjs';
 
-// Login de conductor
+// Login
 export async function login(req, res) {
     try {
-        const { email, license_number } = req.body;
+        const { email, phone } = req.body;
 
-        if (!email || !license_number) {
+        if (!email || !phone) {
             return res.status(400).json({
                 success: false,
-                message: 'Email y número de licencia son obligatorios'
+                message: 'Email y teléfono son obligatorios'
             });
         }
 
-        const driver = await Driver.findOne({ email, license_number });
+        const user = await User.findOne({ email, phone });
 
-        if (!driver) {
+        if (!user) {
             return res.status(401).json({
                 success: false,
                 message: 'Credenciales inválidas'
@@ -23,23 +23,25 @@ export async function login(req, res) {
         }
 
         const token = generateToken({ 
-            id: driver._id.toString(), 
-            email: driver.email,
-            name: driver.name
+            id: user._id.toString(), 
+            email: user.email,
+            name: user.name,
+            role: user.role
         });
 
         res.status(200).json({
             success: true,
             message: 'Login exitoso',
             token,
-            driver: {
-                id: driver._id,
-                name: driver.name,
-                email: driver.email,
-                phone: driver.phone,
-                license_number: driver.license_number,
-                rating: driver.rating,
-                status: driver.status
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                rating: user.rating,
+                status: user.status,
+                license_number: user.license_number
             }
         });
     } catch (error) {
@@ -51,93 +53,66 @@ export async function login(req, res) {
     }
 }
 
-// Verificar token 
-export async function verifyToken(req, res) {
-    try {
-        // El middleware ya verificó el token y agregó req.user
-        const driver = await Driver.findById(req.user.id);
-        
-        if (!driver) {
-            return res.status(404).json({
-                success: false,
-                message: 'Conductor no encontrado'
-            });
-        }
-
-        res.status(200).json({
-            success: true,
-            message: 'Token válido',
-            driver: {
-                id: driver._id,
-                name: driver.name,
-                email: driver.email,
-                phone: driver.phone,
-                license_number: driver.license_number,
-                rating: driver.rating,
-                status: driver.status
-            }
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error al verificar token',
-            error: error.message
-        });
-    }
-}
-
-// Registro de conductor
+// Registro
 export async function register(req, res) {
     try {
-        const { name, email, phone, license_number } = req.body;
+        const { name, email, phone, role, license_number } = req.body;
 
         // Validación
-        if (!name || !email || !phone || !license_number) {
+        if (!name || !email || !phone || !role) {
             return res.status(400).json({
                 success: false,
                 message: 'Todos los campos son obligatorios'
             });
         }
 
-        // Verificar si ya existe
-        const existingDriver = await Driver.findOne({ 
-            $or: [{ email }, { license_number }] 
-        });
-
-        if (existingDriver) {
+        // Si es conductor, validar licencia
+        if (role === 'driver' && !license_number) {
             return res.status(400).json({
                 success: false,
-                message: 'El email o número de licencia ya están registrados'
+                message: 'El número de licencia es obligatorio para conductores'
             });
         }
 
-        // Crear nuevo conductor
-        const newDriver = new Driver({
+        // Verificar si ya existe
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: 'El email ya está registrado'
+            });
+        }
+
+        // Crear nuevo usuario
+        const newUser = new User({
             name,
             email,
             phone,
-            license_number
+            role,
+            license_number: role === 'driver' ? license_number : undefined
         });
 
-        const savedDriver = await newDriver.save();
+        const savedUser = await newUser.save();
 
         // Generar token
         const token = generateToken({ 
-            id: savedDriver._id.toString(),
-            email: savedDriver.email,
-            name: savedDriver.name
+            id: savedUser._id.toString(),
+            email: savedUser.email,
+            name: savedUser.name,
+            role: savedUser.role
         });
 
         res.status(201).json({
             success: true,
-            message: 'Conductor registrado exitosamente',
+            message: 'Usuario registrado exitosamente',
             token,
-            driver: {
-                id: savedDriver._id,
-                name: savedDriver.name,
-                email: savedDriver.email,
-                phone: savedDriver.phone,
-                license_number: savedDriver.license_number
+            user: {
+                id: savedUser._id,
+                name: savedUser.name,
+                email: savedUser.email,
+                phone: savedUser.phone,
+                role: savedUser.role,
+                rating: savedUser.rating
             }
         });
     } catch (error) {
@@ -151,7 +126,42 @@ export async function register(req, res) {
 
         res.status(500).json({
             success: false,
-            message: 'Error al registrar conductor',
+            message: 'Error al registrar usuario',
+            error: error.message
+        });
+    }
+}
+
+// Verificar token
+export async function verifyToken(req, res) {
+    try {
+        const user = await User.findById(req.user.id);
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Usuario no encontrado'
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            message: 'Token válido',
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                phone: user.phone,
+                role: user.role,
+                rating: user.rating,
+                status: user.status,
+                license_number: user.license_number
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al verificar token',
             error: error.message
         });
     }
