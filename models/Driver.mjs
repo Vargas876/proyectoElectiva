@@ -27,7 +27,6 @@ const driverSchema = new mongoose.Schema({
     trim: true,
     uppercase: true
   },
-  // ✅ AGREGAR ESTOS CAMPOS
   vehicle_type: {
     type: String,
     enum: ['sedan', 'suv', 'van', 'minibus'],
@@ -44,39 +43,28 @@ const driverSchema = new mongoose.Schema({
     min: 1,
     max: 20
   },
-  // Campos existentes
   rating: {
     type: Number,
     default: 5.0,
-    min: [0, 'El rating no puede ser menor a 0'],
-    max: [5, 'El rating no puede ser mayor a 5']
+    min: 0,
+    max: 5
   },
   status: {
     type: String,
-    enum: {
-      values: ['available', 'busy', 'offline'],
-      message: '{VALUE} no es un estado válido'
-    },
+    enum: ['available', 'busy', 'offline'],
     default: 'available'
   },
   total_trips: {
     type: Number,
     default: 0,
-    min: [0, 'El número de viajes no puede ser negativo']
+    min: 0
   }
 }, {
   timestamps: true,
   versionKey: false
 });
 
-// Índices
 driverSchema.index({ email: 1 });
 driverSchema.index({ license_number: 1 });
-
-// Métodos
-driverSchema.methods.incrementTrips = async function() {
-  this.total_trips += 1;
-  return await this.save();
-};
 
 export default mongoose.model('Driver', driverSchema);
