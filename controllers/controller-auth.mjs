@@ -90,70 +90,76 @@ export async function verifyToken(req, res) {
 //  OPCIONAL: Función de registro si quieres permitir auto-registro de conductores
 export async function register(req, res) {
     try {
-        const { name, email, phone, license_number } = req.body;
-
-        // Validación
-        if (!name || !email || !phone || !license_number) {
-            return res.status(400).json({
-                success: false,
-                message: 'Todos los campos son obligatorios'
-            });
+      const { name, email, phone, license_number, vehicle_type, vehicle_plate, vehicle_capacity } = req.body;
+      
+      // Validación
+      if (!name || !email || !phone || !license_number) {
+        return res.status(400).json({
+          success: false,
+          message: 'Todos los campos son obligatorios'
+        });
+      }
+  
+      // Verificar si ya existe
+      const existingDriver = await Driver.findOne({
+        $or: [{ email }, { license_number }]
+      });
+  
+      if (existingDriver) {
+        return res.status(400).json({
+          success: false,
+          message: 'El email o número de licencia ya están registrados'
+        });
+      }
+  
+      // Crear nuevo conductor
+      const newDriver = new Driver({
+        name,
+        email,
+        phone,
+        license_number,
+        vehicle_type,
+        vehicle_plate,
+        vehicle_capacity
+      });
+  
+      const savedDriver = await newDriver.save();
+  
+      // Generar token
+      const token = generateToken({
+        id: savedDriver._id.toString(),
+        email: savedDriver.email,
+        name: savedDriver.name
+      });
+  
+      res.status(201).json({
+        success: true,
+        message: 'Conductor registrado exitosamente',
+        token,
+        driver: {
+          id: savedDriver._id,
+          name: savedDriver.name,
+          email: savedDriver.email,
+          phone: savedDriver.phone,
+          license_number: savedDriver.license_number,
+          vehicle_type: savedDriver.vehicle_type,
+          vehicle_plate: savedDriver.vehicle_plate,
+          vehicle_capacity: savedDriver.vehicle_capacity
         }
-
-        // Verificar si ya existe
-        const existingDriver = await Driver.findOne({ 
-            $or: [{ email }, { license_number }] 
-        });
-
-        if (existingDriver) {
-            return res.status(400).json({
-                success: false,
-                message: 'El email o número de licencia ya están registrados'
-            });
-        }
-
-        // Crear nuevo conductor
-        const newDriver = new Driver({
-            name,
-            email,
-            phone,
-            license_number
-        });
-
-        const savedDriver = await newDriver.save();
-
-        // Generar token
-        const token = generateToken({ 
-            id: savedDriver._id.toString(),
-            email: savedDriver.email,
-            name: savedDriver.name
-        });
-
-        res.status(201).json({
-            success: true,
-            message: 'Conductor registrado exitosamente',
-            token,
-            driver: {
-                id: savedDriver._id,
-                name: savedDriver.name,
-                email: savedDriver.email,
-                phone: savedDriver.phone,
-                license_number: savedDriver.license_number
-            }
-        });
+      });
     } catch (error) {
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                success: false,
-                message: 'Error de validación',
-                errors: Object.values(error.errors).map(err => err.message)
-            });
-        }
-
-        res.status(500).json({
-            success: false,
-            message: 'Error al registrar conductor',
-            error: error.message
+      if (error.name === 'ValidationError') {
+        return res.status(400).json({
+          success: false,
+          message: 'Error de validación',
+          errors: Object.values(error.errors).map(err => err.message)
         });
+      }
+      res.status(500).json({
+        success: false,
+        message: 'Error al registrar conductor',
+        error: error.message
+      });
     }
-}
+  }
+  
