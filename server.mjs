@@ -1,255 +1,117 @@
 // server.mjs
-import cors from 'cors';
-import express from 'express';
-import http from 'http';
-import { Server as SocketIOServer } from 'socket.io';
-import swaggerJsdoc from 'swagger-jsdoc';
-import swaggerUi from 'swagger-ui-express';
-import connectDB from './config/connect-db.mjs';
-import { errorHandler, notFound } from './middlewares/errorHandler.mjs';
+import cors from "cors";
+import dotenv from "dotenv";
+import express from "express";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import connectDB from "./config/connect-db.mjs";
 
-// ============ RUTAS EXISTENTES ============
-import authRoutes from './routes/auth-routes.mjs';
-import driverRoutes from './routes/driver-routes.mjs';
-import tripRoutes from './routes/trip-routes.mjs';
+// Importar rutas
+import authRoutes from "./routes/auth-routes.mjs";
+import driverRoutes from "./routes/driver-routes.mjs";
+import emergencyRoutes from "./routes/emergency-routes.mjs";
+import notificationRoutes from "./routes/notification-routes.mjs";
+import recurringTripRoutes from "./routes/recurring-trip-routes.mjs";
+import reviewRoutes from "./routes/review-routes.mjs";
+import rewardRoutes from "./routes/reward-routes.mjs";
+import tripRoutes from "./routes/trip-routes.mjs";
+import verificationRoutes from "./routes/verification-routes.mjs";
 
-// ============ NUEVAS RUTAS ============
-import emergencyRoutes from './routes/emergency-routes.mjs';
-import notificationRoutes from './routes/notification-routes.mjs';
-import recurringTripRoutes from './routes/recurring-trip-routes.mjs';
-import reviewRoutes from './routes/review-routes.mjs';
-import rewardRoutes from './routes/reward-routes.mjs';
-import verificationRoutes from './routes/verification-routes.mjs';
+// Middlewares
+import { errorHandler, notFound } from "./middlewares/errorHandler.mjs";
+
+dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const httpServer = createServer(app);
 
-// Crear servidor HTTP para Socket.IO
-const server = http.createServer(app);
+// ============================================
+// CONFIGURACIÓN DE CORS (ACTUALIZADA)
+// ============================================
+const allowedOrigins = [
+  'http://localhost:5173',                                    // ✅ Frontend local
+  'http://localhost:3000',                                    // ✅ Backend local
+  'https://proyectoelectiva-frontend.onrender.com',          // ✅ Frontend producción
+  'https://proyectoelectiva-pyl0.onrender.com'               // ✅ Backend producción
+];
 
-// ============ CONFIGURACIÓN SOCKET.IO ============
-const io = new SocketIOServer(server, {
+app.use(cors({
+  origin: function (origin, callback) {
+    // Permitir requests sin origin (como mobile apps o curl)
+    if (!origin) return callback(null, true);
+    
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log('❌ CORS bloqueado para origen:', origin);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+// ============================================
+// SOCKET.IO con CORS
+// ============================================
+const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: allowedOrigins,
+    methods: ["GET", "POST"],
     credentials: true
   }
 });
 
-// Hacer io accesible globalmente
-app.set('io', io);
-
-// Socket.IO Event Handlers
-io.on('connection', (socket) => {
-  console.log(`✅ Usuario conectado: ${socket.id}`);
-  
-  // Unirse a sala de viaje
-  socket.on('join-trip', (tripId) => {
-    socket.join(`trip-${tripId}`);
-    console.log(`Usuario ${socket.id} se unió al viaje ${tripId}`);
-  });
-  
-  // Enviar mensaje en chat de viaje
-  socket.on('send-message', ({ tripId, message, sender }) => {
-    const messageData = {
-      ...message,
-      sender,
-      timestamp: new Date(),
-      id: Date.now()
-    };
-    io.to(`trip-${tripId}`).emit('new-message', messageData);
-  });
-  
-  // Actualización de ubicación en tiempo real
-  socket.on('update-location', ({ tripId, location }) => {
-    socket.to(`trip-${tripId}`).emit('location-updated', location);
-  });
-  
-  // Alerta SOS
-  socket.on('trigger-sos', ({ tripId, driverId, location }) => {
-    io.emit('sos-alert', { tripId, driverId, location, timestamp: new Date() });
-  });
-  
-  socket.on('disconnect', () => {
-    console.log(`❌ Usuario desconectado: ${socket.id}`);
-  });
-});
+// Middleware básicos
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Conectar a MongoDB
 connectDB();
 
-// ============ CONFIGURACIÓN CORS MEJORADA ============
-const corsOptions = {
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-  credentials: true,
-  optionsSuccessStatus: 200,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-};
+// Rutas
+app.use("/api/auth", authRoutes);
+app.use("/api/drivers", driverRoutes);
+app.use("/api/trips", tripRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/rewards", rewardRoutes);
+app.use("/api/emergency", emergencyRoutes);
+app.use("/api/recurring-trips", recurringTripRoutes);
+app.use("/api/verification", verificationRoutes);
 
-app.use(cors(corsOptions));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Ruta de prueba
+app.get("/", (req, res) => {
+  res.json({ message: "API Driver Trip funcionando correctamente" });
+});
 
-// ============ SWAGGER CONFIGURATION ============
-const swaggerOptions = {
-  definition: {
-    openapi: '3.0.0',
-    info: {
-      title: 'Driver Trip API',
-      version: '2.0.0',
-      description: 'API RESTful mejorada para gestión de conductores, viajes y funcionalidades innovadoras',
-      contact: {
-        name: 'API Support',
-        email: 'support@drivertrip.com'
-      }
-    },
-    servers: [
-      {
-        url: 'https://proyectoelectiva-pyl0.onrender.com',
-        description: 'Production server (Render)'
-      },
-      {
-        url: 'http://localhost:3000',
-        description: 'Development server'
-      }
-    ],
-    components: {
-      securitySchemes: {
-        bearerAuth: {
-          type: 'http',
-          scheme: 'bearer',
-          bearerFormat: 'JWT'
-        }
-      }
-    },
-    security: [{ bearerAuth: [] }]
-  },
-  apis: ['./routes/*.mjs']
-};
+// Socket.IO eventos
+io.on('connection', (socket) => {
+  console.log('✅ Usuario conectado:', socket.id);
 
-const swaggerDocs = swaggerJsdoc(swaggerOptions);
+  socket.on('join_trip', (tripId) => {
+    socket.join(`trip_${tripId}`);
+    console.log(`👤 Usuario ${socket.id} se unió al viaje ${tripId}`);
+  });
 
-const swaggerUiOptions = {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Driver Trip API Documentation',
-  swaggerOptions: {
-    persistAuthorization: true
-  }
-};
+  socket.on('send_message', (data) => {
+    io.to(`trip_${data.tripId}`).emit('new_message', data);
+  });
 
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs, swaggerUiOptions));
-
-// ============ ROOT ENDPOINT ============
-app.get('/', (req, res) => {
-  res.json({
-    success: true,
-    message: 'Bienvenido a Driver Trip API v2.0',
-    version: '2.0.0',
-    documentation: '/api-docs',
-    features: {
-      core: ['authentication', 'drivers', 'trips'],
-      new: [
-        'real-time chat',
-        'reviews & ratings',
-        'notifications',
-        'gamification',
-        'emergency alerts',
-        'recurring trips',
-        'driver verification'
-      ]
-    },
-    endpoints: {
-      authentication: {
-        login: 'POST /api/auth/login',
-        register: 'POST /api/auth/register',
-        verify: 'GET /api/auth/verify'
-      },
-      drivers: {
-        list: 'GET /api/drivers',
-        get: 'GET /api/drivers/:id',
-        create: 'POST /api/drivers',
-        update: 'PUT /api/drivers/:id',
-        delete: 'DELETE /api/drivers/:id'
-      },
-      trips: {
-        list: 'GET /api/trips',
-        get: 'GET /api/trips/:id',
-        create: 'POST /api/trips',
-        update: 'PUT /api/trips/:id',
-        delete: 'DELETE /api/trips/:id',
-        addPassenger: 'POST /api/trips/:id/passengers',
-        rate: 'POST /api/trips/:id/rate',
-        statistics: 'GET /api/trips/statistics'
-      },
-      reviews: {
-        create: 'POST /api/reviews',
-        getByDriver: 'GET /api/reviews/driver/:driverId',
-        getByTrip: 'GET /api/reviews/trip/:tripId'
-      },
-      notifications: {
-        getAll: 'GET /api/notifications',
-        markAsRead: 'PUT /api/notifications/:id/read',
-        markAllAsRead: 'PUT /api/notifications/read-all'
-      },
-      rewards: {
-        getRewards: 'GET /api/rewards',
-        getBadges: 'GET /api/rewards/badges',
-        getLeaderboard: 'GET /api/rewards/leaderboard'
-      },
-      emergency: {
-        triggerSOS: 'POST /api/emergency/sos',
-        getAlerts: 'GET /api/emergency/alerts'
-      },
-      recurringTrips: {
-        create: 'POST /api/recurring-trips',
-        getAll: 'GET /api/recurring-trips',
-        update: 'PUT /api/recurring-trips/:id',
-        delete: 'DELETE /api/recurring-trips/:id'
-      },
-      verification: {
-        requestVerification: 'POST /api/verification/request',
-        uploadDocument: 'POST /api/verification/upload',
-        getStatus: 'GET /api/verification/status'
-      }
-    }
+  socket.on('disconnect', () => {
+    console.log('❌ Usuario desconectado:', socket.id);
   });
 });
 
-// ============ HEALTH CHECK ============
-app.get('/health', (req, res) => {
-  res.json({
-    status: 'OK',
-    timestamp: new Date(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
-  });
-});
-
-// ============ ROUTES ============
-app.use('/api/auth', authRoutes);
-app.use('/api/drivers', driverRoutes);
-app.use('/api/trips', tripRoutes);
-
-// Nuevas rutas
-app.use('/api/reviews', reviewRoutes);
-app.use('/api/notifications', notificationRoutes);
-app.use('/api/rewards', rewardRoutes);
-app.use('/api/emergency', emergencyRoutes);
-app.use('/api/recurring-trips', recurringTripRoutes);
-app.use('/api/verification', verificationRoutes);
-
-// ============ ERROR HANDLERS ============
+// Manejo de errores
 app.use(notFound);
 app.use(errorHandler);
 
-// ============ START SERVER ============
-server.listen(PORT, () => {
-  console.log('='.repeat(50));
-  console.log(`🚀 Server running on port ${PORT}`);
-  console.log(`📚 API Documentation: http://localhost:${PORT}/api-docs`);
-  console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`💬 Socket.IO enabled for real-time features`);
-  console.log('='.repeat(50));
+// Iniciar servidor
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () => {
+  console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
 });
 
-export default app;
+export { io };

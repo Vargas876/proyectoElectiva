@@ -1,30 +1,39 @@
 // middlewares/auth.mjs
 import jwt from 'jsonwebtoken';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'secret-key';
-
-// Middleware de autenticación
 export const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-
-  if (!token) {
-    return res.status(401).json({ success: false, message: 'Access token required' });
-  }
-
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.user = decoded;
-    next();
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: 'Acceso denegado. No se proporcionó token.',
+      });
+    }
+
+    jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+      if (err) {
+        return res.status(403).json({
+          success: false,
+          message: 'Token inválido o expirado.',
+        });
+      }
+
+      req.user = user;
+      next();
+    });
   } catch (error) {
-    return res.status(403).json({ success: false, message: 'Invalid or expired token' });
+    console.error('Error en authenticateToken:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error interno del servidor',
+    });
   }
 };
 
-// ✅ AGREGAR ESTA LÍNEA - Alias para compatibilidad
+// Alias para mantener compatibilidad
 export const verifyToken = authenticateToken;
 
-// Función para generar tokens
-export const generateToken = (payload) => {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
-};
+export default authenticateToken;
