@@ -1,4 +1,3 @@
-// models/EmergencyAlert.mjs
 import mongoose from 'mongoose';
 
 const emergencyAlertSchema = new mongoose.Schema(

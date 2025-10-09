@@ -1,4 +1,3 @@
-// controllers/controller-reviews.mjs
 import Driver from '../models/Driver.mjs';
 import Review from '../models/Review.mjs';
 import Trip from '../models/Trip.mjs';

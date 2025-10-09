@@ -1,4 +1,3 @@
-// controllers/controller-notifications.mjs
 import Notification from '../models/Notification.mjs';
 
 export const getAllNotifications = async (req, res) => {

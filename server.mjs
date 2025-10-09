@@ -4,7 +4,9 @@ import dotenv from "dotenv";
 import express from "express";
 import { createServer } from "http";
 import { Server } from "socket.io";
+import swaggerUi from 'swagger-ui-express';
 import connectDB from "./config/connect-db.mjs";
+import swaggerSpec from './config/swagger.mjs';
 
 // Importar rutas
 import authRoutes from "./routes/auth-routes.mjs";
@@ -26,18 +28,17 @@ const app = express();
 const httpServer = createServer(app);
 
 // ============================================
-// CONFIGURACIÓN DE CORS (ACTUALIZADA)
+// CONFIGURACIÓN DE CORS
 // ============================================
 const allowedOrigins = [
-  'http://localhost:5173',                                    // ✅ Frontend local
-  'http://localhost:3000',                                    // ✅ Backend local
-  'https://proyectoelectiva-frontend.onrender.com',          // ✅ Frontend producción
-  'https://proyectoelectiva-pyl0.onrender.com'               // ✅ Backend producción
+  'http://localhost:5173',                                    // Frontend local
+  'http://localhost:3000',                                    // Backend local
+  'https://proyectoelectiva-frontend.onrender.com',          // Frontend producción
+  'https://proyectoelectiva-pyl0.onrender.com'               // Backend producción
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permitir requests sin origin (como mobile apps o curl)
     if (!origin) return callback(null, true);
     
     if (allowedOrigins.indexOf(origin) !== -1) {
@@ -70,7 +71,31 @@ app.use(express.urlencoded({ extended: true }));
 // Conectar a MongoDB
 connectDB();
 
-// Rutas
+// ============================================
+// SWAGGER DOCUMENTATION
+// ============================================
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'Driver Trip API Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    filter: true,
+    syntaxHighlight: {
+      theme: 'monokai'
+    }
+  }
+}));
+
+// Ruta para obtener el JSON de Swagger
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+
+// ============================================
+// RUTAS DE LA API
+// ============================================
 app.use("/api/auth", authRoutes);
 app.use("/api/drivers", driverRoutes);
 app.use("/api/trips", tripRoutes);
@@ -81,12 +106,29 @@ app.use("/api/emergency", emergencyRoutes);
 app.use("/api/recurring-trips", recurringTripRoutes);
 app.use("/api/verification", verificationRoutes);
 
-// Ruta de prueba
+// Ruta de bienvenida
 app.get("/", (req, res) => {
-  res.json({ message: "API Driver Trip funcionando correctamente" });
+  res.json({ 
+    message: "API Driver Trip funcionando correctamente",
+    version: "2.0.0",
+    documentation: `${req.protocol}://${req.get('host')}/api-docs`,
+    endpoints: {
+      auth: "/api/auth",
+      drivers: "/api/drivers",
+      trips: "/api/trips",
+      reviews: "/api/reviews",
+      notifications: "/api/notifications",
+      rewards: "/api/rewards",
+      emergency: "/api/emergency",
+      recurringTrips: "/api/recurring-trips",
+      verification: "/api/verification"
+    }
+  });
 });
 
-// Socket.IO eventos
+// ============================================
+// SOCKET.IO EVENTOS
+// ============================================
 io.on('connection', (socket) => {
   console.log('✅ Usuario conectado:', socket.id);
 
@@ -104,14 +146,23 @@ io.on('connection', (socket) => {
   });
 });
 
-// Manejo de errores
+// Hacer io accesible en las rutas
+app.set('io', io);
+
+// ============================================
+// MANEJO DE ERRORES
+// ============================================
 app.use(notFound);
 app.use(errorHandler);
 
-// Iniciar servidor
+// ============================================
+// INICIAR SERVIDOR
+// ============================================
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`🚀 Servidor corriendo en puerto ${PORT}`);
+  console.log(`📚 Documentación Swagger: http://localhost:${PORT}/api-docs`);
+  console.log(`📄 Swagger JSON: http://localhost:${PORT}/api-docs.json`);
 });
 
 export { io };

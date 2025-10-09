@@ -1,4 +1,3 @@
-// models/Verification.mjs
 import mongoose from 'mongoose';
 
 const verificationSchema = new mongoose.Schema(

@@ -1,9 +1,7 @@
-// routes/verification-routes.mjs
-// routes/verification-routes.mjs
 import express from 'express';
 import multer from 'multer';
 import path from 'path';
-import { authenticateToken } from '../middlewares/auth.mjs'; // ✅ CORREGIDO
+import { authenticateToken } from '../middlewares/auth.mjs';
 import Verification from '../models/Verification.mjs';
 
 const router = express.Router();

@@ -1,4 +1,3 @@
-// controllers/controller-auth.mjs
 import jwt from "jsonwebtoken";
 import Driver from "../models/Driver.mjs";
 
@@ -156,7 +155,6 @@ export const logout = async (req, res) => {
   }
 };
 
-// ✅ AGREGAR ESTA FUNCIÓN
 export const verifyToken = async (req, res) => {
   try {
     // El token ya fue verificado por el middleware authenticateToken
@@ -199,7 +197,7 @@ export const verifyToken = async (req, res) => {
   }
 };
 
-// ✅ AGREGAR FUNCIÓN getCurrentUser (opcional pero útil)
+// FUNCIÓN getCurrentUser 
 export const getCurrentUser = async (req, res) => {
   try {
     const driver = await Driver.findById(req.user.id).select('-__v');

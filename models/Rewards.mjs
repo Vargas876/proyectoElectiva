@@ -1,4 +1,3 @@
-// models/Rewards.mjs
 import mongoose from 'mongoose';
 
 const rewardsSchema = new mongoose.Schema(

@@ -1,4 +1,3 @@
-// controllers/controller-rewards.mjs
 import Rewards from '../models/Rewards.mjs';
 
 // Obtener recompensas del usuario actual

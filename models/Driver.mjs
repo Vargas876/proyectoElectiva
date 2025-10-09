@@ -1,4 +1,3 @@
-// models/Driver.mjs
 import mongoose from 'mongoose';
 
 const driverSchema = new mongoose.Schema(
@@ -273,7 +272,7 @@ const driverSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: true, // Agrega createdAt y updatedAt automáticamente
+    timestamps: true, 
     versionKey: false // Elimina el campo __v
   }
 );
@@ -305,7 +304,7 @@ driverSchema.virtual('is_trusted').get(function() {
 
 // ============ MÉTODOS DE INSTANCIA ============
 
-// CORRECCIÓN: Método que faltaba en tu código original
+// Método que faltaba en tu código original
 driverSchema.methods.incrementTrips = async function() {
   this.total_trips += 1;
   return await this.save();

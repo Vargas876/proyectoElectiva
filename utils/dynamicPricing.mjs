@@ -1,4 +1,3 @@
-// Backend: utils/dynamicPricing.mjs
 export const calculateDynamicPrice = async (route, departureTime) => {
     const basePrice = calculateBasePrice(route.distance_km);
     

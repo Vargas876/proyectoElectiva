@@ -43,7 +43,7 @@ async function findById(req, res) {
     }
 }
 
-// ✅ CORREGIDO: Crear conductor con validación y campos completos
+// Crear conductor con validación y campos completos
 async function save(req, res) {
     try {
         const { 
@@ -118,7 +118,7 @@ async function save(req, res) {
     }
 }
 
-// ✅ CORREGIDO: Actualizar con todos los campos
+//  Actualizar con todos los campos
 async function update(req, res) {
     try {
         const { 

@@ -1,4 +1,3 @@
-// Backend: controllers/controller-emergency.mjs
 export const triggerSOS = async (req, res) => {
     const { trip_id, location, reason } = req.body;
     

@@ -1,4 +1,3 @@
-// models/RecurringTrip.mjs
 import mongoose from 'mongoose';
 
 const recurringTripSchema = new mongoose.Schema(
